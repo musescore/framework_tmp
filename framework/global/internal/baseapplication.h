@@ -19,40 +19,54 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef MUSE_GLOBAL_APPLICATION_H
-#define MUSE_GLOBAL_APPLICATION_H
+#ifndef MUSE_GLOBAL_BASEAPPLICATION_H
+#define MUSE_GLOBAL_BASEAPPLICATION_H
 
 #include "../iapplication.h"
 
 namespace muse {
-class Application : public IApplication
+class BaseApplication : public IApplication
 {
 public:
 
-    Application() = default;
+    BaseApplication(const modularity::ContextPtr& ctx);
 
-    String name() const override;
+    static String appName();
+    static bool appUnstable();
+    static Version appVersion();
+    static Version appFullVersion();
+    static String appBuild();
+    static String appRevision();
 
-    bool unstable() const override;
-    Version version() const override;
-    Version fullVersion() const override;
-    String build() const override;
-    String revision() const override;
+    String name() const override { return appName(); }
+    bool unstable() const override { return appUnstable(); }
+    Version version() const override { return appVersion(); }
+    Version fullVersion() const override { return appFullVersion(); }
+    String build() const override { return appBuild(); }
+    String revision() const override { return appRevision(); }
 
-    void setRunMode(const RunMode& mode) override;
+    void setRunMode(const RunMode& mode);
     RunMode runMode() const override;
     bool noGui() const override;
 
     void restart() override;
+
+    const modularity::ContextPtr iocContext() const override;
+    modularity::ModulesIoC* ioc() const override;
 
 #ifndef NO_QT_SUPPORT
     QWindow* focusWindow() const override;
     bool notify(QObject* object, QEvent* event) override;
 #endif
 
+protected:
+
+    void removeIoC();
+
 private:
     RunMode m_runMode = RunMode::GuiApp;
+    modularity::ContextPtr m_iocContext;
 };
 }
 
-#endif // MUSE_GLOBAL_APPLICATION_H
+#endif // MUSE_GLOBAL_BASEAPPLICATION_H
