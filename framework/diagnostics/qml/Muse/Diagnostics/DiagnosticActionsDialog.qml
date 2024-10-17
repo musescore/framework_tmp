@@ -19,31 +19,24 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef MUSE_UPDATE_IMUSESOUNDSCHECKUPDATESERVICE_H
-#define MUSE_UPDATE_IMUSESOUNDSCHECKUPDATESERVICE_H
+import QtQuick 2.15
+import Muse.Ui 1.0
+import Muse.UiComponents 1.0
 
-#include "types/retval.h"
-#include "progress.h"
+StyledDialogView {
+    id: root
 
-#include "updatetypes.h"
+    title: "Diagnostic: Actions"
 
-#include "modularity/imoduleinterface.h"
+    contentHeight: 800
+    contentWidth: 600
+    resizable: true
 
-namespace muse::update {
-class IMuseSoundsCheckUpdateService : MODULE_EXPORT_INTERFACE
-{
-    INTERFACE_ID(IMuseSamplerUpdateService)
+    //! NOTE It is necessary that it can be determined that this is an object for diagnostics
+    contentItem.objectName: panel.objectName
 
-public:
-    virtual ~IMuseSoundsCheckUpdateService() = default;
-
-    virtual Ret needCheckForUpdate() const = 0;
-
-    virtual RetVal<ReleaseInfo> checkForUpdate() = 0;
-    virtual RetVal<ReleaseInfo> lastCheckResult() = 0;
-
-    virtual Progress updateProgress() = 0;
-};
+    DiagnosticActionsPanel {
+        id: panel
+        anchors.fill: parent
+    }
 }
-
-#endif // MUSE_UPDATE_IMUSESOUNDSCHECKUPDATESERVICE_H
