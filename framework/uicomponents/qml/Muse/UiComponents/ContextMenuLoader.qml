@@ -60,6 +60,12 @@ Item {
     StyledMenuLoader {
         id: contextMenuLoader
 
+        onMenuChanged: {
+            if (menu) {
+                menu.setParentWindow(root.Window.window)
+            }
+        }
+
         onHandleMenuItem: function(itemId) {
             container.handleMenuItem(itemId)
         }
