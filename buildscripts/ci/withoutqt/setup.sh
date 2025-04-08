@@ -48,7 +48,6 @@ apt_packages_basic=(
   # Alphabetical order please!
   file
   git
-  pkg-config
   software-properties-common # installs `add-apt-repository`
   unzip
   p7zip-full
@@ -108,7 +107,7 @@ sudo apt-get install -y --no-install-recommends \
 
 # COMPILER
 
-gcc_version="11"
+gcc_version="10"
 sudo apt-get install -y --no-install-recommends "g++-${gcc_version}"
 sudo update-alternatives \
   --install /usr/bin/gcc gcc "/usr/bin/gcc-${gcc_version}" 40 \

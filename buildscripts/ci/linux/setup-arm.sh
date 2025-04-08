@@ -67,7 +67,6 @@ apt_packages=(
   libtool
   libssl-dev
   patchelf
-  pkg-config
   software-properties-common # installs `add-apt-repository`
   unzip
   wget
@@ -121,6 +120,10 @@ apt_packages_runtime=(
   libxcb-randr0
   libxcb-render-util0
   libxcb-xinerama0
+  libxcb-xkb-dev
+  libxkbcommon-dev
+  libopengl-dev
+  libvulkan-dev
   )
 
 apt_packages_ffmpeg=(
@@ -136,17 +139,60 @@ DEBIAN_FRONTEND="noninteractive" TZ="Europe/London" apt-get install -y --no-inst
   "${apt_packages_runtime[@]}" \
   "${apt_packages_ffmpeg[@]}"
 
-# Add additional ppas (Qt 5.15.2, Cmake, and patchelf)
-# Poor naming of the cmake ppa, this ppa has bionic/focal/jammy dists
-add-apt-repository --yes ppa:theofficialgman/cmake-bionic
-add-apt-repository --yes ppa:theofficialgman/opt-qt-5.15.2-focal-arm
-# minimum patchelf 0.12 needed for proper elf load memory alignment
-add-apt-repository --yes ppa:theofficialgman/patchelf
-apt-get update
-apt-get upgrade -y
-
 # add an exception for the "detected dubious ownership in repository" (only seen inside a Docker image)
 git config --global --add safe.directory /MuseScore
+
+##########################################################################
+# GET QT
+##########################################################################
+
+apt_packages_qt6=(
+  qt6-base-dev
+  qt6-declarative-dev
+  qt6-base-private-dev
+  libqt6networkauth6-dev
+  libqt6qml6
+  qml6-module-* # installs all qml modules
+  libqt6quick6
+  libqt6quickcontrols2-6
+  libqt6quicktemplates2-6
+  libqt6quickwidgets6
+  libqt6xml6
+  libqt6svg6-dev
+  qt6-tools-dev
+  qt6-tools-dev-tools
+  libqt6printsupport6
+  libqt6opengl6-dev
+  qt6-l10n-tools
+  libqt6core5compat6-dev
+  qt6-scxml-dev
+  qt6-wayland
+  libqt6websockets6-dev
+  )
+
+apt-get install -y \
+  "${apt_packages_qt6[@]}"
+
+case $PACKARCH in
+  aarch64)
+    qt_dir="/usr/lib/aarch64-linux-gnu/qt6"
+    ;;
+  armv7l)
+    qt_dir="/usr/lib/arm-linux-gnueabihf/qt6"
+    ;;
+  *)
+    echo "Unknown architecture: $PACKARCH"
+    exit 1
+    ;;
+esac
+
+if [[ ! -d "${qt_dir}" ]]; then
+  echo "Qt directory not found: ${qt_dir}"
+  exit 1
+fi
+
+# https://askubuntu.com/questions/1460242/ubuntu-22-04-with-qt6-qmake-could-not-find-a-qt-installation-of
+qtchooser -install qt6 $(which qmake6)
 
 ##########################################################################
 # GET TOOLS
@@ -172,186 +218,13 @@ apt-get install -y --no-install-recommends ninja-build
 echo "ninja version"
 ninja --version
 
-##########################################################################
-# GET QT
-##########################################################################
-
-# Get newer Qt (only used cached version if it is the same)
-
-apt_packages_qt=(
-  qt515base
-  qt515declarative
-  qt515quickcontrols
-  qt515quickcontrols2
-  qt515graphicaleffects
-  qt515imageformats
-  qt515networkauth-no-lgpl
-  qt515remoteobjects
-  qt515svg
-  qt515tools
-  qt515translations
-  qt515wayland
-  qt515x11extras
-  qt515xmlpatterns
-  )
-
-apt-get install -y \
-  "${apt_packages_qt[@]}"
-
-qt_version="5152"
-qt_dir="/opt/qt515"
-
-##########################################################################
-# Compile and install nlohmann-json
-##########################################################################
-export CFLAGS="-Wno-psabi"
-export CXXFLAGS="-Wno-psabi"
-CURRDIR=${PWD}
-cd /
-
-git clone https://github.com/nlohmann/json
-cd /json/
-git checkout --recurse-submodules v3.10.4
-git submodule update --init --recursive
-mkdir -p build
-cd build
-cmake -DJSON_BuildTests=OFF ..
-cmake --build . -j $(nproc)
-cmake --build . --target install
-cd /
-
-# ##########################################################################
-# # Compile and install linuxdeploy
-# ##########################################################################
-
-# git clone https://github.com/linuxdeploy/linuxdeploy
-# cd /linuxdeploy/
-# git checkout --recurse-submodules 1-alpha-20231206-1
-# git submodule update --init --recursive
-
-# # patch src/core/generate-excludelist.sh to use curl instead of wget which fails on armhf
-# sed -i 's/wget --quiet "$url" -O -/curl "$url"/g' src/core/generate-excludelist.sh
-
-# mkdir -p build
-# cd build
-# cmake -DBUILD_TESTING=OFF -DUSE_SYSTEM_BOOST=ON ..
-# cmake --build . -j $(nproc)
-# mkdir -p $BUILD_TOOLS/linuxdeploy
-# mv /linuxdeploy/build/bin/* $BUILD_TOOLS/linuxdeploy/
-# $BUILD_TOOLS/linuxdeploy/linuxdeploy --version
-# cd /
-
-##########################################################################
-# Compile and install linuxdeploy-plugin-qt
-##########################################################################
-
-git clone https://github.com/linuxdeploy/linuxdeploy-plugin-qt
-cd /linuxdeploy-plugin-qt/
-git checkout --recurse-submodules 9a388d32b1e95d8b69e201356f050137eb6c0aa3
-git submodule update --init --recursive
-
-# patch src/core/generate-excludelist.sh to use curl instead of wget which fails on armhf
-sed -i 's/wget --quiet "$url" -O -/curl "$url"/g' lib/linuxdeploy/src/core/generate-excludelist.sh
-
-mkdir -p build
-cd build
-cmake -DBUILD_TESTING=OFF -DUSE_SYSTEM_BOOST=ON ..
-cmake --build . -j $(nproc)
-mkdir -p $BUILD_TOOLS/linuxdeploy
-mv /linuxdeploy-plugin-qt/build/bin/linuxdeploy-plugin-qt $BUILD_TOOLS/linuxdeploy/linuxdeploy-plugin-qt
-# $BUILD_TOOLS/linuxdeploy/linuxdeploy --list-plugins
-cd /
-
-# ##########################################################################
-# # Compile and install linuxdeploy-plugin-appimage
-# ##########################################################################
-
-# git clone https://github.com/linuxdeploy/linuxdeploy-plugin-appimage
-# cd /linuxdeploy-plugin-appimage/
-# git checkout --recurse-submodules 1-alpha-20230713-1
-# git submodule update --init --recursive
-# mkdir -p build
-# cd build
-# cmake -DBUILD_TESTING=OFF ..
-# cmake --build . -j $(nproc)
-# mv /linuxdeploy-plugin-appimage/build/src/linuxdeploy-plugin-appimage $BUILD_TOOLS/linuxdeploy/linuxdeploy-plugin-appimage
-# cd /
-# $BUILD_TOOLS/linuxdeploy/linuxdeploy --list-plugins
-
-# ##########################################################################
-# # Compile and install AppImageKit
-# ##########################################################################
-
-# git clone https://github.com/AppImage/AppImageKit
-# cd /AppImageKit/
-# git checkout --recurse-submodules 13
-# git submodule update --init --recursive
-# mkdir -p build
-# cd build
-# cmake -DBUILD_TESTING=OFF ..
-# cmake --build . -j $(nproc)
-# cmake --build . --target install
-# mkdir -p $BUILD_TOOLS/appimagetool
-# cd /
-# appimagetool --version
-
-# ##########################################################################
-# # Compile and install appimageupdatetool
-# ##########################################################################
-
-# git clone https://github.com/AppImageCommunity/AppImageUpdate.git
-# cd AppImageUpdate
-# git checkout --recurse-submodules 2.0.0-alpha-1-20220512
-# git submodule update --init --recursive
-# mkdir -p build
-# cd build
-
-# cmake -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_SYSTEM_NAME=Linux ..
-# make -j"$(nproc)"
-# # create the extracted appimage directory
-# mkdir -p $BUILD_TOOLS/appimageupdatetool
-# make install DESTDIR=$BUILD_TOOLS/appimageupdatetool/appimageupdatetool-${PACKARCH}.AppDir
-# mkdir -p $BUILD_TOOLS/appimageupdatetool/appimageupdatetool-${PACKARCH}.AppDir/resources
-# cp -v ../resources/*.xpm $BUILD_TOOLS/appimageupdatetool/appimageupdatetool-${PACKARCH}.AppDir/resources/
-# $BUILD_TOOLS/linuxdeploy/linuxdeploy -v0 --appdir $BUILD_TOOLS/appimageupdatetool/appimageupdatetool-${PACKARCH}.AppDir  --output appimage -d ../resources/appimageupdatetool.desktop -i ../resources/appimage.png
-# cd $BUILD_TOOLS/appimageupdatetool
-# ln -s "appimageupdatetool-${PACKARCH}.AppDir/AppRun" appimageupdatetool # symlink for convenience
-# cd /
-# $BUILD_TOOLS/appimageupdatetool/appimageupdatetool --version
-
-cd ${CURRDIR}
-
-# delete build folders
-rm -rf /linuxdeploy*
-rm -rf /AppImageKit
-rm -rf /AppImageUpdate
-
-# Dump syms
-if [ "$PACKARCH" == "armv7l" ]; then
-  echo "Get Breakpad"
-  breakpad_dir=$BUILD_TOOLS/breakpad
-  if [[ ! -d "$breakpad_dir" ]]; then
-    curl -o $BUILD_TOOLS/dump_syms.7z "https://s3.amazonaws.com/utils.musescore.org/breakpad/linux/armv7l/dump_syms.zip"
-    7z x -y $BUILD_TOOLS/dump_syms.7z -o"$breakpad_dir"
-  fi
-  echo export DUMPSYMS_BIN="$breakpad_dir/dump_syms" >> $ENV_FILE
-else
-  echo "Get Breakpad"
-  breakpad_dir=$BUILD_TOOLS/breakpad
-  if [[ ! -d "$breakpad_dir" ]]; then
-    curl -o $BUILD_TOOLS/dump_syms.7z "https://s3.amazonaws.com/utils.musescore.org/breakpad/linux/aarch64/dump_syms.zip"
-    7z x -y $BUILD_TOOLS/dump_syms.7z -o"$breakpad_dir"
-  fi
-  echo export DUMPSYMS_BIN="$breakpad_dir/dump_syms" >> $ENV_FILE
-fi
-
-echo export PATH="${qt_dir}/bin:\${PATH}" >> ${ENV_FILE}
-echo export LD_LIBRARY_PATH="${qt_dir}/lib:\${LD_LIBRARY_PATH}" >> ${ENV_FILE}
 echo export QT_PATH="${qt_dir}" >> ${ENV_FILE}
 echo export QT_PLUGIN_PATH="${qt_dir}/plugins" >> ${ENV_FILE}
 echo export QML2_IMPORT_PATH="${qt_dir}/qml" >> ${ENV_FILE}
 echo export CFLAGS="-Wno-psabi" >> ${ENV_FILE}
 echo export CXXFLAGS="-Wno-psabi" >> ${ENV_FILE}
+# explicitly set QMAKE path for linuxdeploy-plugin-qt
+echo export QMAKE="/usr/bin/qmake6" >> ${ENV_FILE}
 
 ##########################################################################
 # POST INSTALL

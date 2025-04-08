@@ -15,7 +15,7 @@ if(MUSE_APP_UNSTABLE)
     set(DESKTOP_LAUNCHER_NAME "MU ${MUSE_APP_VERSION_MAJ_MIN}") # Muse X.Y
 else(MUSE_APP_UNSTABLE)
     # Use full name for stable releases
-    set(DESKTOP_LAUNCHER_NAME "${MUSE_APP_NAME} ${MUSE_APP_VERSION_MAJ_MIN}") # Muse X.Y
+    set(DESKTOP_LAUNCHER_NAME "${MUSE_APP_TITLE} ${MUSE_APP_VERSION_MAJ_MIN}") # Muse X.Y
 endif(MUSE_APP_UNSTABLE)
 
 if(${MUSE_APP_INSTALL_SUFFIX} MATCHES "dev")
@@ -54,7 +54,6 @@ if(${MUSE_APP_INSTALL_SUFFIX} MATCHES "portable") # Note: "portableanything" wou
     install(PROGRAMS ${PROJECT_BINARY_DIR}/portable-utils
         ${CMAKE_CURRENT_LIST_DIR}/portable/ldd-recursive
         buildscripts/packaging/Linux+BSD/portable/rm-empty-dirs DESTINATION bin COMPONENT portable)
-    install(FILES ${CMAKE_CURRENT_LIST_DIR}/portable/qt.conf DESTINATION bin COMPONENT portable)
 else(${MUSE_APP_INSTALL_SUFFIX} MATCHES "portable")
     set(MAN_PORTABLE ".\\\"") # comment out lines in man page that are only relevant to the portable version
 endif(${MUSE_APP_INSTALL_SUFFIX} MATCHES "portable")
@@ -62,7 +61,11 @@ endif(${MUSE_APP_INSTALL_SUFFIX} MATCHES "portable")
 # Identify App's main window so that it receives the correct name
 # and icon in the OS dock / taskbar. Run `xprop WM_CLASS` and click on
 # App's main window to find out what string to use here.
-set(WINDOW_MANAGER_CLASS ${MUSE_APP_NAME_VERSION})
+if(MUSE_APP_UNSTABLE)
+    set(WINDOW_MANAGER_CLASS "${MUSE_APP_NAME_MACHINE_READABLE_COMPAT}${MUSE_APP_VERSION_MAJOR}Development")
+else()
+    set(WINDOW_MANAGER_CLASS "${MUSE_APP_NAME_MACHINE_READABLE_COMPAT}${MUSE_APP_VERSION_MAJOR}")
+endif()
 
 # Install desktop file (perform variable substitution first)
 configure_file(${CMAKE_CURRENT_LIST_DIR}/org.musescore.MuseScore.desktop.in org.musescore.MuseScore${MUSE_APP_INSTALL_SUFFIX}.desktop)

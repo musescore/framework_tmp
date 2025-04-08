@@ -19,27 +19,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-ARTIFACTS_DIR=build.artifacts
+echo "Setup ccache config"
 
-S3_KEY=""
-S3_SECRET=""
-S3_URL=""
+export CCACHE_DIR=$GITHUB_WORKSPACE/.ccache
+mkdir -p $CCACHE_DIR
 
-FILE_NAME=""
+echo "CCACHE_DIR=$CCACHE_DIR" | tee -a $GITHUB_ENV
+echo "base_dir = $GITHUB_WORKSPACE" >$CCACHE_DIR/ccache.conf
+echo "compression = true" >>$CCACHE_DIR/ccache.conf
+echo "compression_level = 5" >>$CCACHE_DIR/ccache.conf
+echo "max_size = 2G" >>$CCACHE_DIR/ccache.conf
+echo "sloppiness=pch_defines,time_macros" >>$CCACHE_DIR/ccache.conf
+cat $CCACHE_DIR/ccache.conf
 
-while [[ "$#" -gt 0 ]]; do
-    case $1 in
-        --s3_key) S3_KEY="$2"; shift ;;
-        --s3_secret) S3_SECRET="$2"; shift ;;
-        --s3_url) S3_URL="$2"; shift ;;
-        --file_name) FILE_NAME="$2"; shift ;;
-        *) echo "Unknown parameter passed: $1"; exit 1 ;;
-    esac
-    shift
-done
-
-sudo bash ./buildscripts/ci/tools/s3_install.sh --s3_key ${S3_KEY} --s3_secret ${S3_SECRET}
-
-echo "=== Publish to S3 ==="
-
-s3cmd put --acl-public --guess-mime-type "$ARTIFACTS_DIR/$FILE_NAME" "$S3_URL"
+ccache -s
+ccache -z

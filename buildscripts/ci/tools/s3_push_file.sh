@@ -18,22 +18,26 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-echo "Generate dump symbols"
 
-GEN_SCRIPT=tools/crashdump/generate_syms.sh
-DUMPSYMS_BIN=/c/breakpad_tools/dump_syms.exe
-ARTIFACTS_DIR=build.artifacts
-BUILD_DIR=build.release
-SYMBOLS_DIR=$ARTIFACTS_DIR/symbols
-MSCORE_BIN=$BUILD_DIR/src/app/MuseScoreStudio4.pdb
+S3_KEY=""
+S3_SECRET=""
+S3_URL=""
 
-echo "GEN_SCRIPT: $GEN_SCRIPT"
-echo "DUMPSYMS_BIN: $DUMPSYMS_BIN"
-echo "BUILD_DIR: $BUILD_DIR"
-echo "SYMBOLS_DIR: $SYMBOLS_DIR"
-echo "MSCORE_BIN: $MSCORE_BIN"
+FILE_PATH=""
 
-$GEN_SCRIPT --dumpsyms-bin $DUMPSYMS_BIN --build-dir $BUILD_DIR --symbols-dir $SYMBOLS_DIR --mscore-bin $MSCORE_BIN
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --s3_key) S3_KEY="$2"; shift ;;
+        --s3_secret) S3_SECRET="$2"; shift ;;
+        --s3_url) S3_URL="$2"; shift ;;
+        --file_path) FILE_PATH="$2"; shift ;;
+        *) echo "Unknown parameter passed: $1"; exit 1 ;;
+    esac
+    shift
+done
 
-echo "-----"
-ls $SYMBOLS_DIR
+bash ./buildscripts/ci/tools/s3_install.sh --s3_key ${S3_KEY} --s3_secret ${S3_SECRET}
+
+echo "=== Publish to S3 ==="
+
+s3cmd put --acl-public --guess-mime-type $FILE_PATH "$S3_URL"

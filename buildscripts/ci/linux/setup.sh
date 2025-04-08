@@ -29,13 +29,11 @@ df -h .
 
 BUILD_TOOLS=$HOME/build_tools
 ENV_FILE=$BUILD_TOOLS/environment.sh
-QT5_COMPAT="OFF"
 COMPILER="gcc" # gcc, clang
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --compiler) COMPILER="$2"; shift ;;
-        --qt5_compat) QT5_COMPAT="$2"; shift ;;
         *) echo "Unknown parameter passed: $1"; exit 1 ;;
     esac
     shift
@@ -60,7 +58,7 @@ apt_packages_basic=(
   desktop-file-utils
   file
   git
-  pkg-config
+  lcov # for code coverage
   software-properties-common # installs `add-apt-repository`
   unzip
   p7zip-full
@@ -108,6 +106,7 @@ apt_packages_runtime=(
   libxcb-xinerama0
   libxcb-xkb-dev
   libxkbcommon-dev
+  libopengl-dev
   libvulkan-dev
   )
 
@@ -131,16 +130,14 @@ sudo apt-get install -y --no-install-recommends \
 
 # Get newer Qt (only used cached version if it is the same)
 qt_version="624"
-if [ "$QT5_COMPAT" == "ON" ]; then
-  qt_version="5152"
-fi
-
+qt_revision="r2" # added websocket module
 qt_dir="$BUILD_TOOLS/Qt/${qt_version}"
 if [[ ! -d "${qt_dir}" ]]; then
   mkdir -p "${qt_dir}"
-  qt_url="https://s3.amazonaws.com/utils.musescore.org/Qt${qt_version}_gcc64.7z"
+  qt_url="https://s3.amazonaws.com/utils.musescore.org/Qt${qt_version}_gcc64_${qt_revision}.7z"
   wget -q --show-progress -O qt.7z "${qt_url}"
   7z x -y qt.7z -o"${qt_dir}"
+  rm qt.7z
 fi
 
 echo export PATH="${qt_dir}/bin:\${PATH}" >> ${ENV_FILE}
@@ -158,7 +155,7 @@ echo export QML2_IMPORT_PATH="${qt_dir}/qml" >> ${ENV_FILE}
 if [ "$COMPILER" == "gcc" ]; then
 
   gcc_version="10"
-  sudo apt install -y --no-install-recommends "g++-${gcc_version}"
+  sudo apt-get install -y --no-install-recommends "g++-${gcc_version}"
   sudo update-alternatives \
     --install /usr/bin/gcc gcc "/usr/bin/gcc-${gcc_version}" 40 \
     --slave /usr/bin/g++ g++ "/usr/bin/g++-${gcc_version}"
@@ -171,7 +168,7 @@ if [ "$COMPILER" == "gcc" ]; then
 
 elif [ "$COMPILER" == "clang" ]; then
 
-  sudo apt install clang
+  sudo apt-get install clang
   echo export CC="/usr/bin/clang" >> ${ENV_FILE}
   echo export CXX="/usr/bin/clang++" >> ${ENV_FILE}
 
@@ -184,11 +181,11 @@ fi
 
 # CMAKE
 # Get newer CMake (only used cached version if it is the same)
-cmake_version="3.16.0"
+cmake_version="3.24.0"
 cmake_dir="$BUILD_TOOLS/cmake/${cmake_version}"
 if [[ ! -d "$cmake_dir" ]]; then
   mkdir -p "$cmake_dir"
-  cmake_url="https://cmake.org/files/v${cmake_version%.*}/cmake-${cmake_version}-Linux-x86_64.tar.gz"
+  cmake_url="https://cmake.org/files/v${cmake_version%.*}/cmake-${cmake_version}-linux-x86_64.tar.gz" 
   wget -q --show-progress --no-check-certificate -O - "${cmake_url}" | tar --strip-components=1 -xz -C "${cmake_dir}"
 fi
 echo export PATH="$cmake_dir/bin:\${PATH}" >> ${ENV_FILE}
@@ -205,27 +202,6 @@ fi
 echo export PATH="${ninja_dir}:\${PATH}" >> ${ENV_FILE}
 echo "ninja version"
 $ninja_dir/ninja --version
-
-# Dump syms
-echo "Get Breakpad"
-breakpad_dir=$BUILD_TOOLS/breakpad
-if [[ ! -d "$breakpad_dir" ]]; then
-  wget -q --show-progress -O $BUILD_TOOLS/dump_syms.7z "https://s3.amazonaws.com/utils.musescore.org/breakpad/linux/x86-64/dump_syms.7z"
-  7z x -y $BUILD_TOOLS/dump_syms.7z -o"$breakpad_dir"
-fi
-echo export DUMPSYMS_BIN="$breakpad_dir/dump_syms" >> $ENV_FILE
-
-##########################################################################
-# OTHER
-##########################################################################
-# TODO: https://github.com/musescore/MuseScore/issues/11689
-#echo "Get VST"
-#vst_dir=$BUILD_TOOLS/vst
-#if [[ ! -d "$vst_dir" ]]; then
-#  wget -q --show-progress -O $BUILD_TOOLS/vst_sdk.7z "https://s3.amazonaws.com/utils.musescore.org/VST3_SDK_379.7z"
-#  7z x -y $BUILD_TOOLS/vst_sdk.7z -o"$vst_dir"
-#fi
-#echo export VST3_SDK_PATH="$vst_dir/VST3_SDK" >> $ENV_FILE
 
 ##########################################################################
 # POST INSTALL

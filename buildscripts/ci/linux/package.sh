@@ -48,10 +48,10 @@ if [ -z "$BUILD_MODE" ]; then echo "error: not set BUILD_MODE"; exit 1; fi
 if [ -z "$BUILD_VERSION" ]; then echo "error: not set BUILD_VERSION"; exit 1; fi
 
 PACKTYPE=appimage
-if [ "$BUILD_MODE" == "devel_build" ]; then PACKTYPE=appimage; fi
-if [ "$BUILD_MODE" == "nightly_build" ]; then PACKTYPE=appimage; fi
-if [ "$BUILD_MODE" == "testing_build" ]; then PACKTYPE=appimage; fi
-if [ "$BUILD_MODE" == "stable_build" ]; then PACKTYPE=appimage; fi
+if [ "$BUILD_MODE" == "devel" ]; then PACKTYPE=appimage; fi
+if [ "$BUILD_MODE" == "nightly" ]; then PACKTYPE=appimage; fi
+if [ "$BUILD_MODE" == "testing" ]; then PACKTYPE=appimage; fi
+if [ "$BUILD_MODE" == "stable" ]; then PACKTYPE=appimage; fi
 
 MAJOR_VERSION="${BUILD_VERSION%%.*}"
 
@@ -64,14 +64,14 @@ echo "PACKTYPE: $PACKTYPE"
 echo "PACKARCH: $PACKARCH"
 echo "INSTALL_DIR: $INSTALL_DIR"
 
-if [ "$BUILD_MODE" == "nightly_build" ]; then
+if [ "$BUILD_MODE" == "nightly" ]; then
   BUILD_NUMBER=$(cat $ARTIFACTS_DIR/env/build_number.env)
   BUILD_BRANCH=$(cat $ARTIFACTS_DIR/env/build_branch.env)
   BUILD_REVISION=$(cat $ARTIFACTS_DIR/env/build_revision.env)
-  ARTIFACT_NAME=MuseScoreNightly-${BUILD_NUMBER}-${BUILD_BRANCH}-${BUILD_REVISION}-${PACKARCH}
+  ARTIFACT_NAME=MuseScore-Studio-Nightly-${BUILD_NUMBER}-${BUILD_BRANCH}-${BUILD_REVISION}-${PACKARCH}
 else
   BUILD_VERSION=$(cat $ARTIFACTS_DIR/env/build_version.env)
-  ARTIFACT_NAME=MuseScore-${BUILD_VERSION}-${PACKARCH}
+  ARTIFACT_NAME=MuseScore-Studio-${BUILD_VERSION}-${PACKARCH}
 fi
 
 if [ "$PACKTYPE" == "7z" ]; then
@@ -85,8 +85,8 @@ if [ "$PACKTYPE" == "appimage" ]; then
     # To enable automatic updates for AppImages, set UPDATE_INFORMATION according to
     # https://github.com/AppImage/AppImageSpec/blob/master/draft.md#update-information
     case "${BUILD_MODE}" in
-    "stable_build")  export UPDATE_INFORMATION="gh-releases-zsync|musescore|MuseScore|latest|MuseScore-*${PACKARCH}.AppImage.zsync";;
-    "nightly_build") export UPDATE_INFORMATION="zsync|https://ftp.osuosl.org/pub/musescore-nightlies/linux/${MAJOR_VERSION}x/nightly/MuseScoreNightly-latest-${BUILD_BRANCH}-${PACKARCH}.AppImage.zsync";;
+    "stable")  export UPDATE_INFORMATION="gh-releases-zsync|musescore|MuseScore|latest|MuseScore-Studio-*${PACKARCH}.AppImage.zsync";;
+    "nightly") export UPDATE_INFORMATION="zsync|https://ftp.osuosl.org/pub/musescore-nightlies/linux/${MAJOR_VERSION}x/nightly/MuseScore-Studio-Nightly-latest-${BUILD_BRANCH}-${PACKARCH}.AppImage.zsync";;
     *) unset UPDATE_INFORMATION;; # disable updates for other build modes
     esac
 
