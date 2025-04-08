@@ -197,6 +197,10 @@ MenuView {
             root.subMenuLoader.menuAnchorItem = root.anchorItem
             root.subMenuLoader.hasSiblingMenus = root.hasSiblingMenus
 
+            root.subMenuLoader.menuLoaded.connect(function() {
+                root.subMenuLoader.menu.setParentWindow(root.parent.Window.window)
+            })
+
             root.subMenuLoader.handleMenuItem.connect(function(itemId) {
                 Qt.callLater(root.handleMenuItem, itemId)
                 root.subMenuLoader.close()
