@@ -95,9 +95,9 @@ async::Promise<IInteractive::Result> AutobotInteractive::error(const std::string
     return m_real->error(contentTitle, text, buttons, defBtn, options, dialogTitle);
 }
 
-Ret AutobotInteractive::showProgress(const std::string& title, Progress* progress) const
+void AutobotInteractive::showProgress(const std::string& title, Progress* progress)
 {
-    return m_real->showProgress(title, progress);
+    m_real->showProgress(title, progress);
 }
 
 io::path_t AutobotInteractive::selectOpeningFile(const QString& title, const io::path_t& dir, const std::vector<std::string>& filter)
@@ -115,7 +115,7 @@ io::path_t AutobotInteractive::selectSavingFile(const QString& title, const io::
     }
 
     LOGD() << title << " dir:" << dir << ", filter: " << filterList << ", confirmOverwrite: " << confirmOverwrite;
-    m_real->open("muse://autobot/selectfile?sync=true&filePath=" + dir.toStdString());
+    m_real->openSync("muse://autobot/selectfile?sync=true&filePath=" + dir.toStdString());
     m_selectedFilePath = dir;
     return m_selectedFilePath;
 }
@@ -141,37 +141,22 @@ bool AutobotInteractive::isSelectColorOpened() const
     return m_real->isSelectColorOpened();
 }
 
-RetVal<Val> AutobotInteractive::open(const std::string& uri) const
+RetVal<Val> AutobotInteractive::openSync(const UriQuery& uri)
+{
+    return m_real->openSync(uri);
+}
+
+async::Promise<Val> AutobotInteractive::open(const UriQuery& uri)
 {
     return m_real->open(uri);
 }
 
-RetVal<Val> AutobotInteractive::open(const Uri& uri) const
-{
-    return m_real->open(uri);
-}
-
-RetVal<Val> AutobotInteractive::open(const UriQuery& uri) const
-{
-    return m_real->open(uri);
-}
-
-async::Promise<Val> AutobotInteractive::openAsync(const UriQuery& uri)
-{
-    return m_real->openAsync(uri);
-}
-
-RetVal<bool> AutobotInteractive::isOpened(const std::string& uri) const
+RetVal<bool> AutobotInteractive::isOpened(const UriQuery& uri) const
 {
     return m_real->isOpened(uri);
 }
 
 RetVal<bool> AutobotInteractive::isOpened(const Uri& uri) const
-{
-    return m_real->isOpened(uri);
-}
-
-RetVal<bool> AutobotInteractive::isOpened(const UriQuery& uri) const
 {
     return m_real->isOpened(uri);
 }
@@ -186,17 +171,12 @@ void AutobotInteractive::raise(const UriQuery& uri)
     m_real->raise(uri);
 }
 
-void AutobotInteractive::close(const std::string& uri)
+void AutobotInteractive::close(const UriQuery& uri)
 {
     m_real->close(uri);
 }
 
 void AutobotInteractive::close(const Uri& uri)
-{
-    m_real->close(uri);
-}
-
-void AutobotInteractive::close(const UriQuery& uri)
 {
     m_real->close(uri);
 }

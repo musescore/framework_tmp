@@ -54,7 +54,7 @@ public:
     MOCK_METHOD(async::Promise<Result>, error, (const std::string&, const Text&, const ButtonDatas&, int, const Options&,
                                                 const std::string&), (override));
 
-    MOCK_METHOD(Ret, showProgress, (const std::string&, Progress*), (const, override));
+    MOCK_METHOD(void, showProgress, (const std::string&, Progress*), (override));
 
     MOCK_METHOD(io::path_t, selectOpeningFile, (const QString&, const io::path_t&, const std::vector<std::string>&), (override));
     MOCK_METHOD(io::path_t, selectSavingFile, (const QString&, const io::path_t&, const std::vector<std::string>&, bool), (override));
@@ -64,21 +64,16 @@ public:
     MOCK_METHOD(QColor, selectColor, (const QColor&, const QString&), (override));
     MOCK_METHOD(bool, isSelectColorOpened, (), (const, override));
 
-    MOCK_METHOD(RetVal<Val>, open, (const std::string&), (const, override));
-    MOCK_METHOD(RetVal<Val>, open, (const Uri&), (const, override));
-    MOCK_METHOD(RetVal<Val>, open, (const UriQuery&), (const, override));
-    MOCK_METHOD(async::Promise<Val>, openAsync, (const UriQuery&), (override));
-
-    MOCK_METHOD(RetVal<bool>, isOpened, (const std::string&), (const, override));
-    MOCK_METHOD(RetVal<bool>, isOpened, (const Uri&), (const, override));
+    MOCK_METHOD(RetVal<Val>, openSync, (const UriQuery&), (override));
+    MOCK_METHOD(async::Promise<Val>, open, (const UriQuery&), (override));
     MOCK_METHOD(RetVal<bool>, isOpened, (const UriQuery&), (const, override));
+    MOCK_METHOD(RetVal<bool>, isOpened, (const Uri&), (const, override));
     MOCK_METHOD(async::Channel<Uri>, opened, (), (const, override));
 
     MOCK_METHOD(void, raise, (const UriQuery&), (override));
 
-    MOCK_METHOD(void, close, (const std::string&), (override));
-    MOCK_METHOD(void, close, (const Uri&), (override));
     MOCK_METHOD(void, close, (const UriQuery&), (override));
+    MOCK_METHOD(void, close, (const Uri&), (override));
     MOCK_METHOD(void, closeAllDialogs, (), (override));
 
     MOCK_METHOD(ValCh<Uri>, currentUri, (), (const, override));

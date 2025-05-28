@@ -186,11 +186,12 @@ public:
 
     // warning
     virtual async::Promise<Result> warning(const std::string& contentTitle, const Text& text, const ButtonDatas& buttons = {},
-                                           int defBtn = int(Button::NoButton), const Options& options = {},
+                                           int defBtn = int(Button::NoButton), const Options& options = { WithIcon },
                                            const std::string& dialogTitle = "") = 0;
 
     async::Promise<Result> warning(const std::string& contentTitle, const std::string& text, const Buttons& buttons,
-                                   Button defBtn = Button::NoButton, const Options& options = {}, const std::string& dialogTitle = "")
+                                   Button defBtn = Button::NoButton, const Options& options = { WithIcon },
+                                   const std::string& dialogTitle = "")
     {
         return warning(contentTitle, Text(text), buttonDataList(buttons), (int)defBtn, options, dialogTitle);
     }
@@ -208,7 +209,7 @@ public:
     }
 
     // progress
-    virtual Ret showProgress(const std::string& title, Progress* progress) const = 0;
+    virtual void showProgress(const std::string& title, Progress* progress) = 0;
 
     // files
     virtual io::path_t selectOpeningFile(const QString& title, const io::path_t& dir, const std::vector<std::string>& filter) = 0;
@@ -224,22 +225,17 @@ public:
     virtual bool isSelectColorOpened() const = 0;
 
     // custom
-    virtual RetVal<Val> open(const std::string& uri) const = 0;
-    virtual RetVal<Val> open(const Uri& uri) const = 0;
-    virtual RetVal<Val> open(const UriQuery& uri) const = 0;
-    virtual async::Promise<Val> openAsync(const UriQuery& uri) = 0;
-    async::Promise<Val> openAsync(const std::string& uri) { return openAsync(UriQuery(uri)); }
-    async::Promise<Val> openAsync(const Uri& uri) { return openAsync(UriQuery(uri)); }
-    virtual RetVal<bool> isOpened(const std::string& uri) const = 0;
-    virtual RetVal<bool> isOpened(const Uri& uri) const = 0;
+    virtual async::Promise<Val> open(const UriQuery& uri) = 0;
+    async::Promise<Val> open(const std::string& uri) { return open(UriQuery(uri)); }
+    async::Promise<Val> open(const Uri& uri) { return open(UriQuery(uri)); }
     virtual RetVal<bool> isOpened(const UriQuery& uri) const = 0;
+    virtual RetVal<bool> isOpened(const Uri& uri) const = 0;
     virtual async::Channel<Uri> opened() const = 0;
 
     virtual void raise(const UriQuery& uri) = 0;
 
-    virtual void close(const std::string& uri) = 0;
-    virtual void close(const Uri& uri) = 0;
     virtual void close(const UriQuery& uri) = 0;
+    virtual void close(const Uri& uri) = 0;
     virtual void closeAllDialogs() = 0;
 
     virtual ValCh<Uri> currentUri() const = 0;
@@ -257,7 +253,9 @@ public:
     /// and selects the file at filePath on OSs that support it
     virtual Ret revealInFileBrowser(const io::path_t& filePath) const = 0;
 
+    //! =================================
     //! NOTE Please don't use this
+    //! =================================
     virtual Result questionSync(const std::string& contentTitle, const Text& text, const ButtonDatas& buttons,
                                 int defBtn = int(Button::NoButton), const Options& options = {}, const std::string& dialogTitle = "") = 0;
 
@@ -277,12 +275,13 @@ public:
     }
 
     virtual Result warningSync(const std::string& contentTitle, const Text& text, const ButtonDatas& buttons = {},
-                               int defBtn = int(Button::NoButton), const Options& options = {}, const std::string& dialogTitle = "") = 0;
+                               int defBtn = int(Button::NoButton), const Options& options = { WithIcon },
+                               const std::string& dialogTitle = "") = 0;
 
     Result warningSync(const std::string& contentTitle, const std::string& text, const Buttons& buttons,
-                       const Button& defBtn = Button::NoButton, const Options& options = {}, const std::string& dialogTitle = "")
+                       const Button& defBtn = Button::NoButton, const Options& options = { WithIcon }, const std::string& dialogTitle = "")
     {
-        return infoSync(contentTitle, Text(text), buttonDataList(buttons), (int)defBtn, options, dialogTitle);
+        return warningSync(contentTitle, Text(text), buttonDataList(buttons), (int)defBtn, options, dialogTitle);
     }
 
     virtual Result errorSync(const std::string& contentTitle, const Text& text, const ButtonDatas& buttons = {},
@@ -292,8 +291,13 @@ public:
     Result errorSync(const std::string& contentTitle, const std::string& text, const Buttons& buttons,
                      const Button& defBtn = Button::NoButton, const Options& options = { WithIcon }, const std::string& dialogTitle = "")
     {
-        return infoSync(contentTitle, Text(text), buttonDataList(buttons), (int)defBtn, options, dialogTitle);
+        return errorSync(contentTitle, Text(text), buttonDataList(buttons), (int)defBtn, options, dialogTitle);
     }
+
+    virtual RetVal<Val> openSync(const UriQuery& uri) = 0;
+    RetVal<Val> openSync(const std::string& uri) { return openSync(UriQuery(uri)); }
+    RetVal<Val> openSync(const Uri& uri) { return openSync(UriQuery(uri)); }
+    //! ==============================
 };
 DECLARE_OPERATORS_FOR_FLAGS(IInteractive::Options)
 }

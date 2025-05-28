@@ -29,7 +29,6 @@
 #include <QGuiApplication>
 #include <QWindow>
 
-#include "global/containers.h"
 #include "diagnostics/diagnosticutils.h"
 
 #include "log.h"
@@ -89,7 +88,7 @@ void InteractiveProvider::raiseWindowInStack(QObject* newActiveWindow)
 
     for (int i = 0; i < m_stack.size(); ++i) {
         bool found = m_stack[i].window == newActiveWindow;
-        if (m_stack[i].window->isWidgetType()) {
+        if (m_stack[i].window && m_stack[i].window->isWidgetType()) {
             found = newActiveWindow->objectName() == (m_stack[i].window->objectName() + "Window");
         }
 
@@ -100,95 +99,6 @@ void InteractiveProvider::raiseWindowInStack(QObject* newActiveWindow)
             return;
         }
     }
-}
-
-RetVal<Val> InteractiveProvider::question(const std::string& contentTitle, const IInteractive::Text& text,
-                                          const IInteractive::ButtonDatas& buttons, int defBtn,
-                                          const IInteractive::Options& options,
-                                          const std::string& dialogTitle)
-{
-    return openStandardDialog("QUESTION", contentTitle, text, {}, buttons, defBtn, options, dialogTitle);
-}
-
-RetVal<Val> InteractiveProvider::info(const std::string& contentTitle, const IInteractive::Text& text,
-                                      const IInteractive::ButtonDatas& buttons,
-                                      int defBtn,
-                                      const IInteractive::Options& options,
-                                      const std::string& dialogTitle)
-{
-    return openStandardDialog("INFO", contentTitle, text, {}, buttons, defBtn, options, dialogTitle);
-}
-
-RetVal<Val> InteractiveProvider::warning(const std::string& contentTitle, const IInteractive::Text& text,
-                                         const std::string& detailedText,
-                                         const IInteractive::ButtonDatas& buttons,
-                                         int defBtn,
-                                         const IInteractive::Options& options,
-                                         const std::string& dialogTitle)
-{
-    return openStandardDialog("WARNING", contentTitle, text, detailedText, buttons, defBtn, options, dialogTitle);
-}
-
-RetVal<Val> InteractiveProvider::error(const std::string& contentTitle, const IInteractive::Text& text,
-                                       const std::string& detailedText,
-                                       const IInteractive::ButtonDatas& buttons,
-                                       int defBtn,
-                                       const IInteractive::Options& options,
-                                       const std::string& dialogTitle)
-{
-    return openStandardDialog("ERROR", contentTitle, text, detailedText, buttons, defBtn, options, dialogTitle);
-}
-
-Ret InteractiveProvider::showProgress(const std::string& title, Progress* progress)
-{
-    IF_ASSERT_FAILED(progress) {
-        return false;
-    }
-
-    QVariantMap params;
-    params["title"] = QString::fromStdString(title);
-    params["progress"] = QVariant::fromValue(progress);
-
-    QmlLaunchData* data = new QmlLaunchData();
-    data->setValue("params", params);
-
-    emit fireOpenProgressDialog(data);
-
-    Ret ret = toRet(data->value("ret"));
-    QString objectId = data->value("objectId").toString();
-
-    delete data;
-
-    if (!ret) {
-        return ret;
-    }
-
-    if (!objectId.isEmpty()) {
-        RetVal<Val> rv = m_retvals.take(objectId);
-        if (rv.ret.valid()) {
-            return rv.ret;
-        }
-    }
-
-    return muse::make_ok();
-}
-
-RetVal<io::path_t> InteractiveProvider::selectOpeningFile(const std::string& title, const io::path_t& dir,
-                                                          const std::vector<std::string>& filter)
-{
-    return openFileDialog(FileDialogType::SelectOpenningFile, title, dir, filter);
-}
-
-RetVal<io::path_t> InteractiveProvider::selectSavingFile(const std::string& title, const io::path_t& path,
-                                                         const std::vector<std::string>& filter,
-                                                         bool confirmOverwrite)
-{
-    return openFileDialog(FileDialogType::SelectSavingFile, title, path, filter, confirmOverwrite);
-}
-
-RetVal<io::path_t> InteractiveProvider::selectDirectory(const std::string& title, const io::path_t& dir)
-{
-    return openFileDialog(FileDialogType::SelectDirectory, title, dir);
 }
 
 RetVal<QColor> InteractiveProvider::selectColor(const QColor& color, const QString& title)
@@ -226,59 +136,77 @@ bool InteractiveProvider::isSelectColorOpened() const
     return m_isSelectColorOpened;
 }
 
-RetVal<Val> InteractiveProvider::open(const UriQuery& q)
+RetVal<Val> InteractiveProvider::openSync(const UriQuery& q_)
 {
-    m_openingObject.query = q;
-    RetVal<OpenData> openedRet;
+    UriQuery q = q_;
 
-    //! NOTE Currently, extensions do not replace the default functionality
-    //! But in the future, we may allow extensions to replace the current functionality
-    //! (first check for the presence of an extension with this uri,
-    //! and if it is found, then open it)
+    //! NOTE Disable Dialog.exec()
+    q.set("sync", false);
+
+    RetVal<Val> rv;
+    QEventLoop loop;
+    Promise<Val>::Resolve resolve;
+    Promise<Val>::Reject reject;
+    Promise<Val> promise = make_promise<Val>([&resolve, &reject](auto res, auto rej) {
+        resolve = res;
+        reject = rej;
+        return Promise<Val>::Result::unchecked();
+    }, PromiseType::AsyncByBody);
+
+    promise.onResolve(this, [&rv, &loop](const Val& val) {
+        rv = RetVal<Val>::make_ok(val);
+        loop.quit();
+    });
+
+    promise.onReject(this, [&rv, &loop](int code, const std::string& err) {
+        LOGE() << code << " " << err;
+        rv.ret = make_ret(code, err);
+        loop.quit();
+    });
+
+    auto func = openFunc(q);
+    func(resolve, reject);
 
     ContainerMeta openMeta = uriRegister()->meta(q.uri());
-    switch (openMeta.type) {
-    case ContainerType::QWidgetDialog:
-        openedRet = openWidgetDialog(q);
-        break;
-    case ContainerType::PrimaryPage:
-    case ContainerType::QmlDialog:
-        openedRet = openQml(q);
-        break;
-    case ContainerType::Undefined: {
-        //! NOTE Not found default, try extension
-        extensions::Manifest ext = extensionsProvider()->manifest(q.uri());
-        if (ext.isValid()) {
-            openedRet = openExtensionDialog(q);
-        } else {
-            openedRet.ret = make_ret(Ret::Code::UnknownError);
-        }
-    }
+    if (openMeta.type == ContainerType::PrimaryPage) {
+        LOGW() << "Primary pages should not open in synchronous mode, please fix this.";
+        return rv;
     }
 
-    if (!openedRet.ret) {
-        LOGE() << "failed open err: " << openedRet.ret.toString() << ", uri: " << q.toString();
-        return RetVal<Val>(openedRet.ret);
-    }
+    loop.exec();
 
-    RetVal<Val> returnedRV;
-    returnedRV.ret = make_ret(Ret::Code::Ok);
-    if (openedRet.val.sync && !openedRet.val.objectId.isEmpty()) {
-        RetVal<Val> rv = m_retvals.take(openedRet.val.objectId);
-        if (rv.ret.valid()) {
-            returnedRV = rv;
-        }
-    }
-
-    return returnedRV;
+    return rv;
 }
 
 Promise<Val> InteractiveProvider::openAsync(const UriQuery& q)
 {
-    return make_promise<Val>([this, q](auto resolve, auto reject) {
+    return make_promise<Val>(openFunc(q));
+}
+
+async::Promise<Val> InteractiveProvider::openAsync(const Uri& uri, const QVariantMap& params)
+{
+    return make_promise<Val>(openFunc(UriQuery(uri), params));
+}
+
+Promise<Val>::Body InteractiveProvider::openFunc(const UriQuery& q)
+{
+    QVariantMap params;
+    const UriQuery::Params& p = q.params();
+    for (auto it = p.cbegin(); it != p.cend(); ++it) {
+        params[QString::fromStdString(it->first)] = it->second.toQVariant();
+    }
+
+    return openFunc(q, params);
+}
+
+Promise<Val>::Body InteractiveProvider::openFunc(const UriQuery& q, const QVariantMap& params)
+{
+    auto func = [this, q, params](Promise<Val>::Resolve resolve, Promise<Val>::Reject reject) {
         m_openingObject = { q, resolve, reject, QVariant(), nullptr };
 
         RetVal<OpenData> openedRet;
+
+        notifyAboutCurrentUriWillBeChanged();
 
         //! NOTE Currently, extensions do not replace the default functionality
         //! But in the future, we may allow extensions to replace the current functionality
@@ -287,22 +215,22 @@ Promise<Val> InteractiveProvider::openAsync(const UriQuery& q)
 
         ContainerMeta openMeta = uriRegister()->meta(q.uri());
         switch (openMeta.type) {
-            case ContainerType::QWidgetDialog:
-                openedRet = openWidgetDialog(q);
-                break;
-            case ContainerType::PrimaryPage:
-            case ContainerType::QmlDialog:
-                openedRet = openQml(q);
-                break;
-            case ContainerType::Undefined: {
-                //! NOTE Not found default, try extension
-                extensions::Manifest ext = extensionsProvider()->manifest(q.uri());
-                if (ext.isValid()) {
-                    openedRet = openExtensionDialog(q);
-                } else {
-                    openedRet.ret = make_ret(Ret::Code::UnknownError);
-                }
+        case ContainerType::QWidgetDialog:
+            openedRet = openWidgetDialog(q.uri(), params);
+            break;
+        case ContainerType::PrimaryPage:
+        case ContainerType::QmlDialog:
+            openedRet = openQml(q.uri(), params);
+            break;
+        case ContainerType::Undefined: {
+            //! NOTE Not found default, try extension
+            extensions::Manifest ext = extensionsProvider()->manifest(q.uri());
+            if (ext.isValid()) {
+                openedRet = openExtensionDialog(q, params);
+            } else {
+                openedRet.ret = make_ret(Ret::Code::UnknownError);
             }
+        }
         }
 
         if (!openedRet.ret) {
@@ -311,7 +239,9 @@ Promise<Val> InteractiveProvider::openAsync(const UriQuery& q)
         }
 
         return Promise<Val>::Result::unchecked();
-    });
+    };
+
+    return func;
 }
 
 RetVal<bool> InteractiveProvider::isOpened(const Uri& uri) const
@@ -416,7 +346,7 @@ void InteractiveProvider::closeObject(const ObjectInfo& obj)
     }
 }
 
-void InteractiveProvider::fillExtData(QmlLaunchData* data, const UriQuery& q) const
+void InteractiveProvider::fillExtData(QmlLaunchData* data, const UriQuery& q, const QVariantMap& params_) const
 {
     static Uri VIEWER_URI = Uri("muse://extensions/viewer");
 
@@ -424,46 +354,35 @@ void InteractiveProvider::fillExtData(QmlLaunchData* data, const UriQuery& q) co
     data->setValue("path", meta.qmlPath);
     data->setValue("type", meta.type);
 
-    QVariantMap params;
+    QVariantMap params = params_;
     params["uri"] = QString::fromStdString(q.toString());
 
     //! NOTE Extension dialogs open as non-modal by default
     //! The modal parameter must be present in the uri
     //! But here, just in case, `true` is indicated by default,
     //! since this value is set in the base class of the dialog by default
-    params["modal"] = q.param("modal", Val(true)).toBool();
+    if (!params.contains("modal")) {
+        params["modal"] = q.param("modal", Val(true)).toBool();
+    }
 
     data->setValue("uri", QString::fromStdString(VIEWER_URI.toString()));
     data->setValue("sync", params.value("sync", false));
     data->setValue("params", params);
 }
 
-void InteractiveProvider::fillData(QmlLaunchData* data, const UriQuery& q) const
+void InteractiveProvider::fillData(QmlLaunchData* data, const Uri& uri, const QVariantMap& params) const
 {
-    ContainerMeta meta = uriRegister()->meta(q.uri());
+    ContainerMeta meta = uriRegister()->meta(uri);
     data->setValue("path", meta.qmlPath);
     data->setValue("type", meta.type);
-    data->setValue("uri", QString::fromStdString(q.uri().toString()));
-
-    QVariantMap params;
-    const UriQuery::Params& p = q.params();
-    for (auto it = p.cbegin(); it != p.cend(); ++it) {
-        params[QString::fromStdString(it->first)] = it->second.toQVariant();
-    }
-
+    data->setValue("uri", QString::fromStdString(uri.toString()));
     data->setValue("params", params);
     data->setValue("sync", params.value("sync", false));
     data->setValue("modal", params.value("modal", ""));
 }
 
-void InteractiveProvider::fillData(QObject* object, const UriQuery& q) const
+void InteractiveProvider::fillData(QObject* object, const QVariantMap& params) const
 {
-    QVariantMap params;
-    const UriQuery::Params& p = q.params();
-    for (auto it = p.cbegin(); it != p.cend(); ++it) {
-        params[QString::fromStdString(it->first)] = it->second.toQVariant();
-    }
-
     const QMetaObject* metaObject = object->metaObject();
     for (int i = 0; i < metaObject->propertyCount(); i++) {
         QMetaProperty metaProperty = metaObject->property(i);
@@ -471,94 +390,6 @@ void InteractiveProvider::fillData(QObject* object, const UriQuery& q) const
             object->setProperty(metaProperty.name(), params[metaProperty.name()]);
         }
     }
-}
-
-void InteractiveProvider::fillStandardDialogData(QmlLaunchData* data, const QString& type, const std::string& contentTitle,
-                                                 const IInteractive::Text& text, const std::string& detailedText,
-                                                 const IInteractive::ButtonDatas& buttons, int defBtn,
-                                                 const IInteractive::Options& options,
-                                                 const std::string& dialogTitle) const
-{
-    auto format = [](IInteractive::TextFormat f) {
-        switch (f) {
-        case IInteractive::TextFormat::Auto:      return Qt::AutoText;
-        case IInteractive::TextFormat::PlainText: return Qt::PlainText;
-        case IInteractive::TextFormat::RichText:  return Qt::RichText;
-        }
-        return Qt::PlainText;
-    };
-
-    QVariantMap params;
-    params["type"] = type;
-    params["contentTitle"] = QString::fromStdString(contentTitle);
-    params["text"] = QString::fromStdString(text.text);
-    params["detailedText"] = QString::fromStdString(detailedText);
-    params["textFormat"] = format(text.format);
-    params["defaultButtonId"] = defBtn;
-    params["dialogTitle"] = QString::fromStdString(dialogTitle);
-
-    QVariantList buttonsList;
-    QVariantList customButtonsList;
-    if (buttons.empty()) {
-        buttonsList << static_cast<int>(IInteractive::Button::Ok);
-    } else {
-        for (const IInteractive::ButtonData& buttonData: buttons) {
-            QVariantMap customButton;
-            customButton["text"] = QString::fromStdString(buttonData.text);
-            customButton["buttonId"] = buttonData.btn;
-            customButton["role"] = static_cast<int>(buttonData.role);
-            customButton["isAccent"] = buttonData.accent;
-            customButton["isLeftSide"] = buttonData.leftSide;
-            customButtonsList << QVariant(customButton);
-        }
-    }
-
-    params["buttons"] = buttonsList;
-    params["customButtons"] = customButtonsList;
-
-    if (options.testFlag(IInteractive::Option::WithIcon)) {
-        params["withIcon"] = true;
-    }
-
-    if (options.testFlag(IInteractive::Option::WithDontShowAgainCheckBox)) {
-        params["withDontShowAgainCheckBox"] = true;
-    }
-
-    data->setValue("params", params);
-}
-
-void InteractiveProvider::fillFileDialogData(QmlLaunchData* data, FileDialogType type, const std::string& title, const io::path_t& path,
-                                             const std::vector<std::string>& filter, bool confirmOverwrite) const
-{
-    QVariantMap params;
-    params["title"] = QString::fromStdString(title);
-
-    if (type == FileDialogType::SelectOpenningFile || type == FileDialogType::SelectSavingFile) {
-        QStringList filterList;
-        for (const std::string& nameFilter : filter) {
-            filterList << QString::fromStdString(nameFilter);
-        }
-
-        params["nameFilters"] = filterList;
-        params["selectExisting"] = type == FileDialogType::SelectOpenningFile;
-
-        if (type == FileDialogType::SelectOpenningFile) {
-            // see QQuickPlatformFileDialog::FileMode::OpenFile
-            params["fileMode"] = 0;
-            params["folder"] = QUrl::fromLocalFile(path.toQString());
-        } else {
-            // see QQuickPlatformFileDialog::FileMode::SaveFile
-            params["fileMode"] = 2;
-            params["currentFile"] = QUrl::fromLocalFile(path.toQString());
-
-            if (!confirmOverwrite) {
-                params["options"] = QFileDialog::DontConfirmOverwrite;
-            }
-        }
-    }
-
-    data->setValue("params", params);
-    data->setValue("selectFolder", type == FileDialogType::SelectDirectory);
 }
 
 ValCh<Uri> InteractiveProvider::currentUri() const
@@ -690,30 +521,25 @@ RetVal<Val> InteractiveProvider::toRetVal(const QVariant& jsrv) const
     return rv;
 }
 
-RetVal<InteractiveProvider::OpenData> InteractiveProvider::openExtensionDialog(const UriQuery& q)
+RetVal<InteractiveProvider::OpenData> InteractiveProvider::openExtensionDialog(const UriQuery& q, const QVariantMap& params)
 {
-    notifyAboutCurrentUriWillBeChanged();
-
     QmlLaunchData data;
-    fillExtData(&data, q);
+    fillExtData(&data, q, params);
 
     emit fireOpen(&data);
 
     RetVal<OpenData> result;
     result.ret = toRet(data.value("ret"));
-    result.val.sync = data.value("sync").toBool();
     result.val.objectId = data.value("objectId").toString();
 
     return result;
 }
 
-RetVal<InteractiveProvider::OpenData> InteractiveProvider::openWidgetDialog(const UriQuery& q)
+RetVal<InteractiveProvider::OpenData> InteractiveProvider::openWidgetDialog(const Uri& uri, const QVariantMap& params)
 {
-    notifyAboutCurrentUriWillBeChanged();
-
     RetVal<OpenData> result;
 
-    ContainerMeta meta = uriRegister()->meta(q.uri());
+    ContainerMeta meta = uriRegister()->meta(uri);
     int widgetMetaTypeId = meta.widgetMetaTypeId;
 
     static int count(0);
@@ -727,7 +553,7 @@ RetVal<InteractiveProvider::OpenData> InteractiveProvider::openWidgetDialog(cons
         return result;
     }
 
-    fillData(dialog, q);
+    fillData(dialog, params);
 
     dialog->installEventFilter(new WidgetDialogEventFilter(dialog,
                                                            [this, dialog, objectId]() {
@@ -750,99 +576,25 @@ RetVal<InteractiveProvider::OpenData> InteractiveProvider::openWidgetDialog(cons
         dialog->deleteLater();
     }));
 
-    bool sync = q.param("sync", Val(false)).toBool();
-    if (sync) {
-        dialog->exec();
-    } else {
-        dialog->show();
-        dialog->activateWindow(); // give keyboard focus to aid blind users
-    }
+    dialog->show();
+    dialog->activateWindow();     // give keyboard focus to aid blind users
 
     result.ret = make_ret(Ret::Code::Ok);
-    result.val.sync = sync;
     result.val.objectId = objectId;
 
     return result;
 }
 
-RetVal<InteractiveProvider::OpenData> InteractiveProvider::openQml(const UriQuery& q)
+RetVal<InteractiveProvider::OpenData> InteractiveProvider::openQml(const Uri& uri, const QVariantMap& params)
 {
-    notifyAboutCurrentUriWillBeChanged();
+    QmlLaunchData data;
+    fillData(&data, uri, params);
 
-    QmlLaunchData* data = new QmlLaunchData();
-    fillData(data, q);
-
-    emit fireOpen(data);
+    emit fireOpen(&data);
 
     RetVal<OpenData> result;
-    result.ret = toRet(data->value("ret"));
-    result.val.sync = data->value("sync").toBool();
-    result.val.objectId = data->value("objectId").toString();
-
-    delete data;
-
-    return result;
-}
-
-RetVal<Val> InteractiveProvider::openStandardDialog(const QString& type, const std::string& contentTitle, const IInteractive::Text& text,
-                                                    const std::string& detailedText,
-                                                    const IInteractive::ButtonDatas& buttons, int defBtn,
-                                                    const IInteractive::Options& options,
-                                                    const std::string& dialogTitle /* the title in the titlebar */)
-{
-    notifyAboutCurrentUriWillBeChanged();
-
-    QmlLaunchData* data = new QmlLaunchData();
-    fillStandardDialogData(data, type, contentTitle, text, detailedText, buttons, defBtn, options, dialogTitle);
-
-    emit fireOpenStandardDialog(data);
-
-    Ret ret = toRet(data->value("ret"));
-    QString objectId = data->value("objectId").toString();
-
-    delete data;
-
-    RetVal<Val> result;
-    if (!ret) {
-        result.ret = ret;
-        return result;
-    }
-
-    if (!objectId.isEmpty()) {
-        RetVal<Val> rv = m_retvals.take(objectId);
-        if (rv.ret.valid()) {
-            result = rv;
-        }
-    }
-
-    return result;
-}
-
-RetVal<io::path_t> InteractiveProvider::openFileDialog(FileDialogType type, const std::string& title, const io::path_t& path,
-                                                       const std::vector<std::string>& filter, bool confirmOverwrite)
-{
-    notifyAboutCurrentUriWillBeChanged();
-
-    RetVal<io::path_t> result;
-
-    QmlLaunchData* data = new QmlLaunchData();
-    fillFileDialogData(data, type, title, path, filter, confirmOverwrite);
-
-    emit fireOpenFileDialog(data);
-
-    m_fileDialogEventLoop.exec();
-
-    QString objectId = data->value("objectId").toString();
-
-    delete data;
-
-    if (!objectId.isEmpty()) {
-        RetVal<Val> rv = m_retvals.take(objectId);
-        if (rv.ret.valid()) {
-            result.ret = rv.ret;
-            result.val = QUrl::fromUserInput(rv.val.toQString()).toLocalFile();
-        }
-    }
+    result.ret = toRet(data.value("ret"));
+    result.val.objectId = data.value("objectId").toString();
 
     return result;
 }
@@ -899,7 +651,6 @@ void InteractiveProvider::onOpen(const QVariant& type, const QVariant& objectId,
 void InteractiveProvider::onClose(const QString& objectId, const QVariant& jsrv)
 {
     RetVal<Val> rv = toRetVal(jsrv);
-    m_retvals[objectId] = rv;
 
     ObjectInfo obj;
 
@@ -934,8 +685,6 @@ void InteractiveProvider::onClose(const QString& objectId, const QVariant& jsrv)
     if (inStack) {
         notifyAboutCurrentUriChanged();
     }
-
-    m_fileDialogEventLoop.quit();
 }
 
 std::vector<InteractiveProvider::ObjectInfo> InteractiveProvider::allOpenObjects() const

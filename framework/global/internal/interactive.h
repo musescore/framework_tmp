@@ -78,7 +78,7 @@ public:
                                  const std::string& dialogTitle = "") override;
 
     // progress
-    Ret showProgress(const std::string& title, Progress* progress) const override;
+    void showProgress(const std::string& title, Progress* progress) override;
 
     // files
     io::path_t selectOpeningFile(const QString& title, const io::path_t& dir, const std::vector<std::string>& filter) override;
@@ -94,20 +94,16 @@ public:
     bool isSelectColorOpened() const override;
 
     // custom
-    RetVal<Val> open(const std::string& uri) const override;
-    RetVal<Val> open(const Uri& uri) const override;
-    RetVal<Val> open(const UriQuery& uri) const override;
-    async::Promise<Val> openAsync(const UriQuery& uri) override;
-    RetVal<bool> isOpened(const std::string& uri) const override;
-    RetVal<bool> isOpened(const Uri& uri) const override;
+    RetVal<Val> openSync(const UriQuery& uri) override;
+    async::Promise<Val> open(const UriQuery& uri) override;
     RetVal<bool> isOpened(const UriQuery& uri) const override;
+    RetVal<bool> isOpened(const Uri& uri) const override;
     async::Channel<Uri> opened() const override;
 
     void raise(const UriQuery& uri) override;
 
-    void close(const std::string& uri) override;
-    void close(const Uri& uri) override;
     void close(const UriQuery& uri) override;
+    void close(const Uri& uri) override;
     void closeAllDialogs() override;
 
     ValCh<Uri> currentUri() const override;
@@ -124,9 +120,17 @@ public:
     Ret revealInFileBrowser(const io::path_t& filePath) const override;
 
 private:
-    async::Promise<IInteractive::Result> openStandartAsync(const std::string& type, const std::string& contentTitle, const Text& text,
+    UriQuery makeQuery(const std::string& type, const std::string& contentTitle, const Text& text, const ButtonDatas& buttons, int defBtn,
+                       const Options& options, const std::string& dialogTitle) const;
+
+    IInteractive::Result makeResult(const Val& val) const;
+
+    async::Promise<IInteractive::Result> openStandardAsync(const std::string& type, const std::string& contentTitle, const Text& text,
                                                            const ButtonDatas& buttons, int defBtn, const Options& options,
                                                            const std::string& dialogTitle);
+
+    IInteractive::Result openStandardSync(const std::string& type, const std::string& contentTitle, const Text& text,
+                                          const ButtonDatas& buttons, int defBtn, const Options& options, const std::string& dialogTitle);
 };
 }
 
