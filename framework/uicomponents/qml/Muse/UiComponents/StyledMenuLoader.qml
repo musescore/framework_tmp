@@ -33,6 +33,7 @@ Loader {
     signal openNextMenu()
     signal opened()
     signal closed(bool force)
+    signal menuLoaded()
 
     property StyledMenu menu: loader.item as StyledMenu
     property Item menuAnchorItem: null
@@ -41,6 +42,12 @@ Loader {
     property alias isMenuOpened: loader.active
 
     property string accessibleName: ""
+
+    onMenuChanged: {
+        if (menu) {
+            loader.menuLoaded()
+        }
+    }
 
     QtObject {
         id: prv
