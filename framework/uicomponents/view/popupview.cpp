@@ -861,7 +861,7 @@ void PopupView::resolveNavigationParentControl()
             setNavigationParentControl(nullptr);
         });
 
-        setParentWindow(ctrl->window());
+        // setParentWindow(ctrl->window());
     }
 }
 
