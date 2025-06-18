@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2021 MuseScore BVBA and others
+ * Copyright (C) 2025 MuseScore BVBA and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -21,33 +21,28 @@
  */
 #pragma once
 
-#include <sstream>
-#include <string>
-#include <thread>
+#include <QObject>
 
-namespace muse::runtime {
-inline constexpr bool isDebug()
+namespace muse::ui {
+class WidgetDialogAdapter : public QObject
 {
-#ifndef NDEBUG
-    return true;
-#else
-    return false;
+public:
+    WidgetDialogAdapter(QDialog* parent, QWindow* window, bool staysOnTop = true);
+
+    WidgetDialogAdapter& onShow(const std::function<void()>& func);
+    WidgetDialogAdapter& onHide(const std::function<void()>& func);
+
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
+private:
+#ifdef Q_OS_MAC
+    void updateStayOnTopHint();
 #endif
-}
 
-inline std::thread::id mainThreadId()
-{
-    static std::thread::id mainId = std::this_thread::get_id();
-    return mainId;
-}
-
-inline std::string toString(const std::thread::id& id)
-{
-    std::ostringstream ss;
-    ss << id;
-    return ss.str();
-}
-
-void setThreadName(const std::string& name);
-const std::string& threadName();
+    QDialog* m_dialog = nullptr;
+    QWindow* m_window = nullptr;
+    bool m_staysOnTop = true;
+    std::function<void()> m_onShownCallBack;
+    std::function<void()> m_onHideCallBack;
+};
 }
