@@ -146,6 +146,8 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/serialization/json.h
     ${CMAKE_CURRENT_LIST_DIR}/serialization/xmldom.cpp
     ${CMAKE_CURRENT_LIST_DIR}/serialization/xmldom.h
+    ${CMAKE_CURRENT_LIST_DIR}/serialization/msgpack.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/serialization/msgpack.h
 
     ${CMAKE_CURRENT_LIST_DIR}/concurrency/taskscheduler.h
     ${CMAKE_CURRENT_LIST_DIR}/concurrency/concurrent.h
@@ -230,9 +232,12 @@ else()
         set(MODULE_SRC ${MODULE_SRC}
             ${CMAKE_CURRENT_LIST_DIR}/internal/platform/win/wininteractivehelper.cpp
             ${CMAKE_CURRENT_LIST_DIR}/internal/platform/win/wininteractivehelper.h
+            ${CMAKE_CURRENT_LIST_DIR}/platform/win/async.h
             ${CMAKE_CURRENT_LIST_DIR}/platform/win/waitabletimer.h
         )
-        list(APPEND MODULE_LINK Winmm) # needed for timeBeginPeriod
+        list(APPEND MODULE_LINK
+            WindowsApp # needed for C++/WinRT
+            Winmm) # needed for timeBeginPeriod
     endif()
 endif()
 
