@@ -165,7 +165,16 @@ bool MuseSamplerWrapper::isValid() const
 
 void MuseSamplerWrapper::setupSound(const mpe::PlaybackSetupData& setupData)
 {
+    IF_ASSERT_FAILED(m_samplerLib && m_sampler) {
+        return;
+    }
+
     m_tracks.clear();
+
+    std::string scoreId = setupData.scoreId.value_or(std::string());
+    if (!scoreId.empty()) {
+        m_samplerLib->setScoreId(m_sampler, scoreId.c_str());
+    }
 
     ms_Track track = addTrack();
     if (!track) {
@@ -413,6 +422,16 @@ void MuseSamplerWrapper::handleAuditionEvents(const MuseSamplerSequencer::EventT
         }
 
         m_samplerLib->stopAuditionNote(m_sampler, noteOff.msTrack, noteOff.msEvent);
+        return;
+    }
+
+    if (std::holds_alternative<AuditionCCEvent>(event)) {
+        const AuditionCCEvent& ccEvent = std::get<AuditionCCEvent>(event);
+        IF_ASSERT_FAILED(ccEvent.msTrack) {
+            return;
+        }
+
+        m_samplerLib->addAuditionCCEvent(m_sampler, ccEvent.msTrack, ccEvent.cc, ccEvent.value);
         return;
     }
 }
