@@ -26,20 +26,21 @@
 #include "global/async/asyncable.h"
 
 #include "modularity/ioc.h"
-#include "worker/iworkerplayback.h"
+#include "rpc/irpcchannel.h"
 
 #include "iplayer.h"
 
 namespace muse::audio {
 class Playback : public IPlayback, public Injectable, public async::Asyncable
 {
-    Inject<worker::IWorkerPlayback> workerPlayback;
+    Inject<rpc::IRpcChannel> channel;
+
 public:
     Playback(const muse::modularity::ContextPtr& iocCtx)
         : Injectable(iocCtx) {}
 
-    void initOnWorker();
-    void deinitOnWorker();
+    void init();
+    void deinit();
 
     // 1. Add Sequence
     async::Promise<TrackSequenceId> addSequence() override;
@@ -53,12 +54,12 @@ public:
     async::Promise<TrackIdList> trackIdList(const TrackSequenceId sequenceId) const override;
     async::Promise<TrackName> trackName(const TrackSequenceId sequenceId, const TrackId trackId) const override;
 
-    async::Promise<TrackId, AudioParams> addTrack(const TrackSequenceId sequenceId, const std::string& trackName,
-                                                  io::IODevice* playbackData, AudioParams&& params) override;
-    async::Promise<TrackId, AudioParams> addTrack(const TrackSequenceId sequenceId, const std::string& trackName,
+    async::Promise<TrackId, AudioParams> addTrack(const TrackSequenceId sequenceId, const TrackName& trackName, io::IODevice* playbackData,
+                                                  AudioParams&& params) override;
+    async::Promise<TrackId, AudioParams> addTrack(const TrackSequenceId sequenceId, const TrackName& trackName,
                                                   const mpe::PlaybackData& playbackData, AudioParams&& params) override;
 
-    async::Promise<TrackId, AudioOutputParams> addAuxTrack(const TrackSequenceId sequenceId, const std::string& trackName,
+    async::Promise<TrackId, AudioOutputParams> addAuxTrack(const TrackSequenceId sequenceId, const TrackName& trackName,
                                                            const AudioOutputParams& outputParams) override;
 
     void removeTrack(const TrackSequenceId sequenceId, const TrackId trackId) override;
@@ -112,6 +113,10 @@ private:
     async::Channel<TrackSequenceId, TrackId, AudioInputParams> m_inputParamsChanged;
     async::Channel<TrackSequenceId, TrackId, AudioOutputParams> m_outputParamsChanged;
     async::Channel<AudioOutputParams> m_masterOutputParamsChanged;
+
+    mutable std::map<TrackSequenceId, async::Channel<int64_t, int64_t> > m_saveSoundTrackProgressChannels;
+    async::Channel<TrackSequenceId, int64_t, int64_t> m_saveSoundTrackProgressStream;
+    mutable rpc::StreamId m_saveSoundTrackProgressStreamId = 0;
 };
 }
 

@@ -34,7 +34,6 @@
 #include "global/realfn.h"
 #include "global/async/channel.h"
 #include "global/io/iodevice.h"
-#include "global/progress.h"
 
 #include "mpe/events.h"
 
@@ -138,6 +137,7 @@ struct AudioResourceMeta {
     AudioResourceType type = AudioResourceType::Undefined;
     AudioResourceVendor vendor;
     AudioResourceAttributes attributes;
+    bool hasNativeEditorSupport = false;
 
     const String& attributeVal(const String& key) const
     {
@@ -149,8 +149,6 @@ struct AudioResourceMeta {
         static String empty;
         return empty;
     }
-
-    bool hasNativeEditorSupport = false;
 
     bool isValid() const
     {
@@ -213,6 +211,12 @@ using AudioFxCategories = std::set<AudioFxCategory>;
 using AudioFxChainOrder = int8_t;
 
 struct AudioFxParams {
+    AudioFxCategories categories;
+    AudioFxChainOrder chainOrder = -1;
+    AudioResourceMeta resourceMeta;
+    AudioUnitConfig configuration;
+    bool active = false;
+
     AudioFxType type() const
     {
         switch (resourceMeta.type) {
@@ -228,17 +232,11 @@ struct AudioFxParams {
         return AudioFxType::Undefined;
     }
 
-    AudioFxCategories categories;
-    AudioFxChainOrder chainOrder = -1;
-    AudioResourceMeta resourceMeta;
-    AudioUnitConfig configuration;
-    bool active = false;
-
     bool operator ==(const AudioFxParams& other) const
     {
-        return resourceMeta == other.resourceMeta
-               && active == other.active
+        return active == other.active
                && chainOrder == other.chainOrder
+               && resourceMeta == other.resourceMeta
                && categories == other.categories
                && configuration == other.configuration;
     }
@@ -350,6 +348,12 @@ struct AudioParams {
 struct AudioSignalVal {
     float amplitude = 0.f;
     volume_dbfs_t pressure = 0.f;
+
+    inline bool operator ==(const AudioSignalVal& other) const
+    {
+        return muse::is_equal(amplitude, other.amplitude)
+               && pressure == other.pressure;
+    }
 };
 
 using AudioSignalValuesMap = std::map<audioch_t, AudioSignalVal>;

@@ -51,12 +51,12 @@ SOFTWARE.
 #define LOGI LOGI_T(LOG_TAG)
 #define LOGD LOGD_T(LOG_TAG)
 #define LOGDA LOGDA_T(LOG_TAG)      // active debug
-#define LOGN if (0) LOGD_T(LOG_TAG) // compiling, but no output
+#define LOGN if constexpr (0)LOGD_T(LOG_TAG)  // compiling, but no output
 
 //! Useful macros
 #define DO_ASSERT_X_IMPL(cond, msg, var_name) \
     { \
-        const auto var_name = (cond); \
+        const bool var_name = static_cast<bool>(cond); \
         if (!(var_name)) { \
             LOGE() << "ASSERT FAILED:    " << msg << "    " << __FILE__ << ":" << __LINE__; \
             assert(var_name && #cond); \
@@ -72,7 +72,7 @@ SOFTWARE.
 #define UNIQUE_VAR_NAME(prefix) CONCAT(prefix, __LINE__)
 
 #define IF_ASSERT_FAILED_X_IMPL(cond, msg, var_name) \
-    const auto var_name = (cond); \
+    const bool var_name = static_cast<bool>(cond); \
     if (!(var_name)) { \
         LOGE() << "ASSERT FAILED:    " << msg << "    " << __FILE__ << ":" << __LINE__; \
         assert(var_name && #cond); \
@@ -83,7 +83,7 @@ SOFTWARE.
 #define IF_ASSERT_FAILED(cond) IF_ASSERT_FAILED_X(cond, #cond)
 
 #define IF_FAILED_IMPL(cond, var_name) \
-    const auto var_name = (cond); \
+    const bool var_name = static_cast<bool>(cond); \
     if (!(var_name)) { \
         LOGE() << "FAILED: " << #cond << " at " << __FILE__ << ":" << __LINE__; \
     } \

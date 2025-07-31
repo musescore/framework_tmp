@@ -28,6 +28,7 @@
 
 #include "async/channel.h"
 #include "realfn.h"
+#include "global/types/number.h"
 #include "types/flags.h"
 #include "types/number.h"
 
@@ -63,7 +64,7 @@ struct ArrangementContext
                && actualDuration == other.actualDuration
                && voiceLayerIndex == other.voiceLayerIndex
                && staffLayerIndex == other.staffLayerIndex
-               && bps == other.bps;
+               && muse::is_equal(bps, other.bps);
     }
 };
 
@@ -97,6 +98,8 @@ struct ExpressionContext
 
 struct NoteEvent
 {
+    NoteEvent() = default;
+
     explicit NoteEvent(ArrangementContext&& arrangementCtx,
                        PitchContext&& pitchCtx,
                        ExpressionContext&& expressionCtx)
@@ -256,6 +259,8 @@ private:
 
 struct RestEvent
 {
+    RestEvent() = default;
+
     explicit RestEvent(ArrangementContext&& arrangement)
         : m_arrangementCtx(arrangement) {}
 
@@ -355,7 +360,7 @@ struct SyllableEvent {
 
 using SyllableEventList = std::vector<SyllableEvent>;
 
-using PlaybackEvent = std::variant<NoteEvent,
+using PlaybackEvent = std::variant<std::monostate, NoteEvent,
                                    RestEvent,
                                    TextArticulationEvent,
                                    SoundPresetChangeEvent,
