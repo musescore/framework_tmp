@@ -294,7 +294,28 @@ enum class ArticulationType : signed char {
     Slap,
     Pop,
 
+    LeftHandTapping,
+    RightHandTapping,
+
     ContinuousGlissando,
+
+    // Handbells
+    MalletBellOnTable,
+    MalletBellSuspended,
+    MalletLift,
+    Pluck,
+    PluckLift,
+    Gyro,
+    Martellato,
+    MartellatoLift,
+    HandMartellato,
+    MutedMartellato,
+    ThumbDamp,
+    BrushDamp,
+    Ring,
+    RingTouch,
+    SingingBell,
+    SingingVibrate,
 
     // multi-note articulations
     Trill,
@@ -317,7 +338,7 @@ using ArticulationTypeSet = std::unordered_set<ArticulationType>;
 
 inline bool isMultiNoteArticulation(const ArticulationType type)
 {
-    static const ArticulationTypeSet MULTI_TYPES = {
+    static const ArticulationTypeSet MULTI_TYPES {
         ArticulationType::Trill,
         ArticulationType::Crescendo,
         ArticulationType::Diminuendo,
@@ -511,12 +532,16 @@ struct ArticulationsProfile
 {
     std::vector<ArticulationFamily> supportedFamilies;
 
-    const ArticulationPattern& pattern(const ArticulationType type) const
+    const ArticulationPattern& pattern(const ArticulationType type,
+                                       const ArticulationType fallback = ArticulationType::Undefined) const
     {
         auto search = m_patterns.find(type);
+        if (search == m_patterns.cend() && fallback != ArticulationType::Undefined) {
+            search = m_patterns.find(fallback);
+        }
 
         if (search == m_patterns.cend()) {
-            static ArticulationPattern emptyPattern;
+            static const ArticulationPattern emptyPattern;
             return emptyPattern;
         }
 

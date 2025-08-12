@@ -22,13 +22,17 @@
 #include <gtest/gtest.h>
 
 #pragma pack(push, 1)
-#include "audio/audiotypes.h"
+#include "audio/common/audiotypes.h"
 #pragma pack(pop)
 
-#include "audio/internal/rpc/rpcpacker.h"
+#include "audio/common/rpc/rpcpacker.h"
+#include "audio/common/rpc/irpcchannel.h"
+
+#include "log.h"
 
 using namespace muse;
 using namespace muse::audio;
+using namespace muse::audio::rpc;
 
 class Audio_RpcPackerTests : public ::testing::Test
 {
@@ -80,6 +84,37 @@ TEST_F(Audio_RpcPackerTests, AudioResourceMeta)
     EXPECT_TRUE(origin.hasNativeEditorSupport == unpacked.hasNativeEditorSupport);
 }
 
+TEST_F(Audio_RpcPackerTests, AudioResourceMetaList)
+{
+    int count = 1000;
+    AudioResourceMetaList origin;
+    origin.reserve(count);
+
+    for (int i = 0; i < count; ++i) {
+        AudioResourceMeta meta;
+        meta.id = std::to_string(1234567);
+        meta.type = AudioResourceType::MuseSamplerSoundPack;
+        meta.vendor = "MuseSounds";
+        meta.attributes = {
+            { u"playbackSetupData", u"instrumentSoundId" },
+            { u"museCategory", u"internalCategory" },
+            { u"musePack", u"instrumentPackName" },
+            { u"museVendorName", u"vendorName" },
+            { u"museName", u"internalName" },
+            { u"museUID", String::fromStdString(std::to_string(1234567)) },
+        };
+
+        meta.attributes.insert(std::make_pair(u"isOnline", String::number(1)));
+
+        origin.push_back(meta);
+    }
+
+    BEGIN_STEP_TIME("pack_meta_list");
+    ByteArray data = rpc::RpcPacker::pack(rpc::Options { origin.size() * 300 }, origin);
+    STEP_TIME("pack_meta_list", "after pack");
+    LOGDA() << "data.size: " << data.size();
+}
+
 TEST_F(Audio_RpcPackerTests, AudioFxParams)
 {
     AudioFxParams origin;
@@ -91,9 +126,9 @@ TEST_F(Audio_RpcPackerTests, AudioFxParams)
 
     KNOWN_FIELDS(origin,
                  origin.categories,
-                 origin.chainOrder,
                  origin.resourceMeta,
                  origin.configuration,
+                 origin.chainOrder,
                  origin.active);
 
     ByteArray data = rpc::RpcPacker::pack(origin);
@@ -108,7 +143,7 @@ TEST_F(Audio_RpcPackerTests, AudioFxParams)
 TEST_F(Audio_RpcPackerTests, AuxSendParams)
 {
     AuxSendParams origin;
-    origin.signalAmount = 0.42;
+    origin.signalAmount = 0.42f;
     origin.active = true;
 
     KNOWN_FIELDS(origin,
@@ -128,7 +163,7 @@ TEST_F(Audio_RpcPackerTests, AudioOutputParams)
 {
     AudioOutputParams origin;
     origin.fxChain.insert({ 3, {} });
-    origin.volume = 0.6;
+    origin.volume = 0.6f;
     origin.balance = 0.5;
     origin.auxSends.push_back({});
     origin.forceMute = true;
@@ -241,7 +276,7 @@ TEST_F(Audio_RpcPackerTests, AudioSourceParams)
 TEST_F(Audio_RpcPackerTests, AudioSignalVal)
 {
     AudioSignalVal origin;
-    origin.amplitude = 0.6;
+    origin.amplitude = 0.6f;
     origin.pressure = 0.5;
 
     KNOWN_FIELDS(origin,
@@ -687,7 +722,7 @@ TEST_F(Audio_RpcPackerTests, MPE_PlaybackEvent)
     {
         mpe::ControllerChangeEvent event;
         event.type = mpe::ControllerChangeEvent::Type::Modulation;
-        event.val = 0.4;
+        event.val = 0.4f;
         event.layerIdx = 2;
 
         KNOWN_FIELDS(event,
@@ -762,6 +797,52 @@ TEST_F(Audio_RpcPackerTests, MPE_PlaybackData)
     ByteArray data = rpc::RpcPacker::pack(origin);
 
     mpe::PlaybackData unpacked;
+    bool ok = rpc::RpcPacker::unpack(data, unpacked);
+
+    EXPECT_TRUE(ok);
+    EXPECT_TRUE(origin == unpacked);
+}
+
+template<typename ... Types>
+static void unpack_stream(ByteArray data, async::Channel<Types...> ch)
+{
+    std::tuple<Types...> values;
+    bool success = std::apply([data](auto&... args) {
+        return rpc::RpcPacker::unpack(data, args ...);
+    }, values);
+
+    if (success) {
+        std::apply([&ch](const auto&... args) {
+            ch.send(args ...);
+        }, values);
+    }
+}
+
+TEST_F(Audio_RpcPackerTests, StreamUnpack)
+{
+    int v1_1 = 42;
+    double v1_2 = 73.0;
+    std::string v1_3 = "gg";
+
+    ByteArray data = rpc::RpcPacker::pack(v1_1, v1_2, v1_3);
+
+    async::Channel<int, double, std::string> ch;
+
+    ch.onReceive(nullptr, [v1_1, v1_2, v1_3](int v2_1, double v2_2, std::string v2_3) {
+        EXPECT_EQ(v1_1, v2_1);
+        EXPECT_DOUBLE_EQ(v1_2, v2_2);
+        EXPECT_EQ(v1_3, v2_3);
+    });
+
+    unpack_stream(data, ch);
+}
+
+TEST_F(Audio_RpcPackerTests, Duration)
+{
+    mpe::duration_t origin = 9223372036854775807;
+    ByteArray data = rpc::RpcPacker::pack(origin);
+
+    mpe::duration_t unpacked = 0;
     bool ok = rpc::RpcPacker::unpack(data, unpacked);
 
     EXPECT_TRUE(ok);
