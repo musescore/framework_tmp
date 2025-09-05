@@ -58,8 +58,6 @@ public:
     RetVal<MixerChannelPtr> addAuxChannel(const TrackId trackId);
     Ret removeChannel(const TrackId trackId);
 
-    void setAudioChannelsCount(const audioch_t count);
-
     void addClock(IClockPtr clock);
     void removeClock(IClockPtr clock);
 
@@ -74,7 +72,7 @@ public:
     void setTracksToProcessWhenIdle(std::unordered_set<TrackId>&& trackIds);
 
     // IAudioSource
-    void setSampleRate(unsigned int sampleRate) override;
+    void setOutputSpec(const OutputSpec& spec) override;
     unsigned int audioChannelsCount() const override;
     samples_t process(float* outBuffer, samples_t samplesPerChannel) override;
     void setIsActive(bool arg) override;
@@ -95,7 +93,7 @@ private:
 
     msecs_t currentTime() const;
 
-    std::unique_ptr<TaskScheduler> m_taskScheduler;
+    std::shared_ptr<TaskScheduler> m_taskScheduler;
 
     size_t m_minTrackCountForMultithreading = 0;
     size_t m_nonMutedTrackCount = 0;
@@ -118,7 +116,6 @@ private:
     dsp::LimiterPtr m_limiter = nullptr;
 
     std::set<IClockPtr> m_clocks;
-    audioch_t m_audioChannelsCount = 0;
 
     mutable AudioSignalsNotifier m_audioSignalNotifier;
 

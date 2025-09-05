@@ -30,7 +30,7 @@ class SynthesizerStub : public ISynthesizer
 public:
     SynthesizerStub(const audio::AudioSourceParams& params);
 
-    void setSampleRate(unsigned int sampleRate) override;
+    void setOutputSpec(const OutputSpec& spec) override;
 
     unsigned int audioChannelsCount() const override;
 
@@ -61,7 +61,10 @@ public:
     bool isActive() const override;
     void setIsActive(bool arg) override;
 
+    void processInput() override;
     InputProcessingProgress inputProcessingProgress() const override;
+
+    void clearCache() override;
 
 private:
     audio::AudioInputParams m_params;

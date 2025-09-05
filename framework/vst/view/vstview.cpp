@@ -28,7 +28,11 @@
 #endif
 
 #ifdef USE_LINUX_RUNLOOP
-#include "../internal/platform/linux/runloop.h"
+#include "platform/linux/runloop.h"
+#endif
+
+#ifdef Q_OS_WIN
+#include "platform/windows/flickeringworkaround.h"
 #endif
 
 #include "global/types/number.h"
@@ -102,6 +106,10 @@ void VstView::init()
     IF_ASSERT_FAILED(m_instance) {
         return;
     }
+
+#ifdef Q_OS_WIN
+    FlickeringWorkaround::preventFlickering(window());
+#endif
 
     m_title = QString::fromStdString(m_instance->name());
     emit titleChanged();
@@ -177,6 +185,13 @@ Steinberg::tresult VstView::resizeView(Steinberg::IPlugView* view, Steinberg::Vi
         return Steinberg::kResultFalse;
     }
 
+    // anti recursion
+    if (m_resizeViewCalled) {
+        return Steinberg::kResultTrue;
+    }
+
+    m_resizeViewCalled = true;
+
     view->checkSizeConstraint(requiredSize);
 
     const int titleBarHeight = window()->frameGeometry().height() - window()->geometry().height();
@@ -204,6 +219,8 @@ Steinberg::tresult VstView::resizeView(Steinberg::IPlugView* view, Steinberg::Vi
     // by `m_vstWindow`. This is better than an overflow, because the host might want to place
     // control buttons below the UI, and these ought not to be hidden.
     view->onSize(&vstSize);
+
+    m_resizeViewCalled = false;
 
     return Steinberg::kResultTrue;
 }

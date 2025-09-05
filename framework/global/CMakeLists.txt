@@ -55,7 +55,6 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/translation.cpp
     ${CMAKE_CURRENT_LIST_DIR}/translation.h
     ${CMAKE_CURRENT_LIST_DIR}/timer.h
-    ${CMAKE_CURRENT_LIST_DIR}/threadutils.h
     ${CMAKE_CURRENT_LIST_DIR}/progress.h
     ${CMAKE_CURRENT_LIST_DIR}/utils.cpp
     ${CMAKE_CURRENT_LIST_DIR}/utils.h
@@ -150,10 +149,18 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/serialization/xmldom.h
     ${CMAKE_CURRENT_LIST_DIR}/serialization/msgpack.h
     ${CMAKE_CURRENT_LIST_DIR}/serialization/msgpack_forward.h
-
-    ${CMAKE_CURRENT_LIST_DIR}/concurrency/taskscheduler.h
-    ${CMAKE_CURRENT_LIST_DIR}/concurrency/concurrent.h
+    
+    ${CMAKE_CURRENT_LIST_DIR}/thirdparty/pugixml/pugixml.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/thirdparty/pugixml/pugixml.cpp
 )
+
+if (MUSE_THREADS_SUPPORT)
+    set(MODULE_SRC ${MODULE_SRC}
+        ${CMAKE_CURRENT_LIST_DIR}/concurrency/taskscheduler.h
+        ${CMAKE_CURRENT_LIST_DIR}/concurrency/concurrent.h
+        ${CMAKE_CURRENT_LIST_DIR}/concurrency/threadutils.h
+    )
+endif()
 
 if (GLOBAL_NO_INTERNAL)
     set(MODULE_DEF ${MODULE_DEF} -DGLOBAL_NO_INTERNAL)
@@ -255,6 +262,10 @@ else ()
     set(Z_LIB z)
 endif ()
 
+list(APPEND MODULE_INCLUDE_PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/thirdparty/pugixml
+)
+
 list(APPEND MODULE_INCLUDE_PRIVATE ${Z_INCLUDE})
 list(APPEND MODULE_LINK ${Z_LIB})
 
@@ -283,11 +294,6 @@ endif()
 
 if (MUSE_MODULE_GLOBAL_MULTI_IOC)
     set(MODULE_DEF ${MODULE_DEF} -DMUSE_MODULE_GLOBAL_MULTI_IOC)
-
-target_sources(muse_global
-  PRIVATE
-    types/secs.h
-)
 endif()
 
 setup_module()

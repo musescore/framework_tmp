@@ -48,7 +48,7 @@
 
 using namespace muse::ui;
 
-static const muse::UriQuery DEV_SHOW_CONTROLS_URI("muse://devtools/keynav/controls?sync=false&modal=false");
+static const muse::UriQuery DEV_SHOW_CONTROLS_URI("muse://devtools/keynav/controls?modal=false");
 
 using MoveDirection = NavigationController::MoveDirection;
 using Event = INavigation::Event;
@@ -981,7 +981,19 @@ void NavigationController::onEscape()
     activeCtrl->setActive(false);
 
     if (m_defaultNavigationControl) {
-        doActivateControl(m_defaultNavigationControl);
+        INavigationPanel* defaultPanel = m_defaultNavigationControl->panel();
+        if (!defaultPanel) {
+            return;
+        }
+
+        INavigationSection* defaultSection = defaultPanel->section();
+        if (!defaultSection) {
+            return;
+        }
+
+        onActiveRequested(defaultSection, defaultPanel, m_defaultNavigationControl, true);
+    } else {
+        m_navigationChanged.notify();
     }
 }
 

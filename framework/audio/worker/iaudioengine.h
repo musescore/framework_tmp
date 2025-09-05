@@ -23,7 +23,7 @@
 
 #include "modularity/imoduleinterface.h"
 
-#include "global/async/notification.h"
+#include "global/async/channel.h"
 
 #include "audio/common/audiotypes.h"
 
@@ -37,16 +37,17 @@ class IAudioEngine : MODULE_EXPORT_INTERFACE
 public:
     virtual ~IAudioEngine() = default;
 
-    virtual sample_rate_t sampleRate() const = 0;
-
-    virtual void setSampleRate(const sample_rate_t sampleRate) = 0;
-    virtual void setReadBufferSize(const uint16_t readBufferSize) = 0;
-    virtual void setAudioChannelsCount(const audioch_t count) = 0;
+    virtual void setOutputSpec(const OutputSpec& outputSpec) = 0;
+    virtual OutputSpec outputSpec() const = 0;
+    virtual async::Channel<OutputSpec> outputSpecChanged() const = 0;
 
     virtual RenderMode mode() const = 0;
     virtual void setMode(const RenderMode newMode) = 0;
-    virtual async::Notification modeChanged() const = 0;
+    virtual async::Channel<RenderMode> modeChanged() const = 0;
 
     virtual MixerPtr mixer() const = 0;
+
+    virtual void processAudioData() = 0;
+    virtual void popAudioData(float* dest, size_t sampleCount) = 0;
 };
 }

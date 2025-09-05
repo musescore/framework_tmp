@@ -47,7 +47,7 @@ TrackSequence::TrackSequence(const TrackSequenceId id, const modularity::Context
     m_player = std::make_shared<SequencePlayer>(this, m_clock, iocCtx);
     m_audioIO = std::make_shared<SequenceIO>(this);
 
-    audioEngine()->modeChanged().onNotify(this, [this]() {
+    audioEngine()->modeChanged().onReceive(this, [this](RenderMode) {
         m_prevActiveTrackId = INVALID_TRACK_ID;
     });
 
@@ -102,6 +102,8 @@ RetVal2<TrackId, AudioParams> TrackSequence::addTrack(const std::string& trackNa
 
     EventTrackPtr trackPtr = std::make_shared<EventTrack>();
     EventAudioSourcePtr source = std::make_shared<EventAudioSource>(newId, playbackData, onOffStreamReceived, iocContext());
+
+    source->setOutputSpec(audioEngine()->outputSpec());
 
     trackPtr->id = newId;
     trackPtr->name = trackName;
