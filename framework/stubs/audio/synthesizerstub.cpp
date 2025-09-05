@@ -30,7 +30,7 @@ SynthesizerStub::SynthesizerStub(const AudioSourceParams& params)
 {
 }
 
-void SynthesizerStub::setSampleRate(unsigned int)
+void SynthesizerStub::setOutputSpec(const OutputSpec&)
 {
 }
 
@@ -125,7 +125,15 @@ void SynthesizerStub::setIsActive(bool)
 {
 }
 
+void SynthesizerStub::processInput()
+{
+}
+
 InputProcessingProgress SynthesizerStub::inputProcessingProgress() const
 {
     return InputProcessingProgress();
+}
+
+void SynthesizerStub::clearCache()
+{
 }

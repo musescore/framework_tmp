@@ -425,12 +425,7 @@ bool Interactive::isSelectColorOpened() const
 
 RetVal<Val> Interactive::openSync(const UriQuery& uri)
 {
-    UriQuery newQuery = uri;
-    if (!newQuery.contains("sync")) {
-        newQuery.addParam("sync", Val(true));
-    }
-
-    return provider()->openSync(newQuery);
+    return provider()->openSync(uri);
 }
 
 async::Promise<Val> Interactive::open(const UriQuery& uri)
@@ -509,7 +504,7 @@ Ret Interactive::isAppExists(const std::string& appIdentifier) const
 #endif
 }
 
-Ret Interactive::canOpenApp(const Uri& uri) const
+Ret Interactive::canOpenApp(const UriQuery& uri) const
 {
 #ifdef Q_OS_MACOS
     return MacOSInteractiveHelper::canOpenApp(uri);
@@ -520,7 +515,7 @@ Ret Interactive::canOpenApp(const Uri& uri) const
 #endif
 }
 
-async::Promise<Ret> Interactive::openApp(const Uri& uri) const
+async::Promise<Ret> Interactive::openApp(const UriQuery& uri) const
 {
 #ifdef Q_OS_MACOS
     return MacOSInteractiveHelper::openApp(uri);

@@ -37,6 +37,16 @@ using CallId = uint64_t;
 enum class Method {
     Undefined = 0,
 
+    // Init
+    WorkerStarted, // notification
+    WorkerInit,
+
+    // Config
+    WorkerConfigChanged,
+
+    // AudioEngine
+    SetOutputSpec,
+
     // Sequences
     AddSequence,
     RemoveSequence,
@@ -63,6 +73,9 @@ enum class Method {
     // notification
     InputParamsChanged,
 
+    ProcessInput,
+
+    ClearCache,
     ClearSources,
 
     // Play
@@ -101,16 +114,22 @@ enum class Method {
     // SoundFont
     LoadSoundFonts,
     AddSoundFont,
-
-    // AudioEngine
-    SetReadBufferSize,
-    SetSampleRate,
 };
 
 inline std::string to_string(Method m)
 {
     switch (m) {
     case Method::Undefined: return "Undefined";
+
+    // Init
+    case Method::WorkerStarted: return "WorkerStarted";
+    case Method::WorkerInit: return "WorkerInit";
+
+    // Config
+    case Method::WorkerConfigChanged: return "WorkerConfigChanged";
+
+    // AudioEngine
+    case Method::SetOutputSpec: return "SetOutputSpec";
 
     // Sequences
     case Method::AddSequence: return "AddSequence";
@@ -136,6 +155,9 @@ inline std::string to_string(Method m)
     case Method::GetInputProcessingProgress: return "GetInputProcessingProgress";
     case Method::InputParamsChanged: return "InputParamsChanged";
 
+    case Method::ProcessInput: return "ProcessInput";
+
+    case Method::ClearCache: return "ClearCache";
     case Method::ClearSources: return "ClearSources";
 
     // Play
@@ -173,10 +195,6 @@ inline std::string to_string(Method m)
     // SoundFont
     case Method::LoadSoundFonts: return "LoadSoundFonts";
     case Method::AddSoundFont: return "AddSoundFont";
-
-    // AudioEngine
-    case Method::SetReadBufferSize: return "SetReadBufferSize";
-    case Method::SetSampleRate: return "SetSampleRate";
     }
 
     assert(false && "unknown enum value");
@@ -306,6 +324,9 @@ class IRpcChannel : MODULE_EXPORT_INTERFACE
     INTERFACE_ID(IRpcChannel)
 public:
     virtual ~IRpcChannel() = default;
+
+    virtual void setupOnMain() = 0;
+    virtual void setupOnWorker() = 0;
 
     virtual void process() = 0;
 

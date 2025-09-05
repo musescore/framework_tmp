@@ -28,24 +28,21 @@
 #include "modularity/imodulesetup.h"
 #include "global/async/asyncable.h"
 
-#include "../iaudiodriver.h"
-
 namespace muse::audio::worker  {
-class AudioWorkerModule;
-class AudioThread;
+class IAudioWorker;
 }
 
 namespace muse::audio::rpc  {
-class GeneralRpcChannel;
+class IRpcChannel;
 }
 
 namespace muse::audio {
 class AudioConfiguration;
+class StartAudioController;
 class AudioOutputDeviceController;
 class Playback;
 class SoundFontController;
-class KnownAudioPluginsRegister;
-class RegisterAudioPluginsScenario;
+class IAudioDriver;
 class AudioModule : public modularity::IModuleSetup, public async::Asyncable
 {
 public:
@@ -59,22 +56,18 @@ public:
     void resolveImports() override;
     void onInit(const IApplication::RunMode& mode) override;
     void onDeinit() override;
-    void onDestroy() override;
 
 private:
-    void setupAudioDriver(const IApplication::RunMode& mode);
-    void setupAudioWorker(const IAudioDriver::Spec& activeSpec);
-
     std::shared_ptr<AudioConfiguration> m_configuration;
+    std::shared_ptr<StartAudioController> m_startAudioController;
     std::shared_ptr<AudioOutputDeviceController> m_audioOutputController;
     std::shared_ptr<Playback> m_mainPlayback;
     std::shared_ptr<SoundFontController> m_soundFontController;
 
-    std::shared_ptr<worker::AudioThread> m_audioThread;
-    std::shared_ptr<worker::AudioWorkerModule> m_workerModule;
+    std::shared_ptr<worker::IAudioWorker> m_audioWorker;
 
     QTimer m_rpcTimer;
-    std::shared_ptr<rpc::GeneralRpcChannel> m_rpcChannel;
+    std::shared_ptr<rpc::IRpcChannel> m_rpcChannel;
 
     std::shared_ptr<IAudioDriver> m_audioDriver;
 };

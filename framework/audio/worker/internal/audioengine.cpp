@@ -34,12 +34,20 @@ using namespace muse::audio;
 using namespace muse::audio::worker;
 using namespace muse::audio::rpc;
 
+static constexpr int MAX_SUPPORTED_AUDIO_CHANNELS = 2;
+
+AudioEngine::AudioEngine()
+{
+    m_buffer = std::make_shared<AudioBuffer>();
+    m_mixer = std::make_shared<Mixer>(nullptr);
+}
+
 AudioEngine::~AudioEngine()
 {
     ONLY_AUDIO_MAIN_OR_WORKER_THREAD;
 }
 
-Ret AudioEngine::init(AudioBufferPtr bufferPtr, const RenderConstraints& consts)
+Ret AudioEngine::init(const OutputSpec& outputSpec, const RenderConstraints& consts)
 {
     ONLY_AUDIO_WORKER_THREAD;
 
@@ -47,36 +55,34 @@ Ret AudioEngine::init(AudioBufferPtr bufferPtr, const RenderConstraints& consts)
         return make_ret(Ret::Code::Ok);
     }
 
-    IF_ASSERT_FAILED(bufferPtr) {
-        return make_ret(Ret::Code::InternalError);
-    }
-
     IF_ASSERT_FAILED(consts.minSamplesToReserveWhenIdle != 0
                      && consts.minSamplesToReserveInRealtime != 0) {
         return make_ret(Ret::Code::InternalError);
     }
 
-    m_mixer = std::make_shared<Mixer>(nullptr);
+    IF_ASSERT_FAILED(outputSpec.audioChannelCount <= MAX_SUPPORTED_AUDIO_CHANNELS) {
+        return make_ret(Ret::Code::InternalError);
+    }
 
-    m_mixer->init(consts.desiredAudioThreadNumber, consts.minTrackCountForMultithreading);
+    LOGI() << "[OutputSpec] sampleRate: " << outputSpec.sampleRate
+           << ", samplesPerChannel: " << outputSpec.samplesPerChannel
+           << ", audioChannelCount: " << outputSpec.audioChannelCount;
 
-    m_buffer = std::move(bufferPtr);
+    m_outputSpec = outputSpec;
     m_renderConsts = consts;
 
-    rpcChannel()->onMethod(Method::SetReadBufferSize, [this](const Msg& msg) {
-        uint16_t bufferSize = 0;
-        IF_ASSERT_FAILED(RpcPacker::unpack(msg.data, bufferSize)) {
-            return;
-        }
-        this->setReadBufferSize(bufferSize);
-    });
+    m_buffer->init(outputSpec.audioChannelCount);
+    updateBufferConstraints();
 
-    rpcChannel()->onMethod(Method::SetSampleRate, [this](const Msg& msg) {
-        sample_rate_t sampleRate = 0;
-        IF_ASSERT_FAILED(RpcPacker::unpack(msg.data, sampleRate)) {
+    m_mixer->init(consts.desiredAudioThreadNumber, consts.minTrackCountForMultithreading);
+    m_mixer->setOutputSpec(outputSpec);
+
+    rpcChannel()->onMethod(Method::SetOutputSpec, [this](const Msg& msg) {
+        OutputSpec spec;
+        IF_ASSERT_FAILED(RpcPacker::unpack(msg.data, spec)) {
             return;
         }
-        this->setSampleRate(sampleRate);
+        this->setOutputSpec(spec);
     });
 
     setMode(RenderMode::IdleMode);
@@ -97,21 +103,7 @@ void AudioEngine::deinit()
     }
 }
 
-void AudioEngine::setOnReadBufferChanged(const OnReadBufferChanged func)
-{
-    ONLY_AUDIO_MAIN_OR_WORKER_THREAD;
-
-    m_onReadBufferChanged = func;
-}
-
-sample_rate_t AudioEngine::sampleRate() const
-{
-    ONLY_AUDIO_WORKER_THREAD;
-
-    return m_sampleRate;
-}
-
-void AudioEngine::setSampleRate(const sample_rate_t sampleRate)
+void AudioEngine::setOutputSpec(const OutputSpec& outputSpec)
 {
     ONLY_AUDIO_WORKER_THREAD;
 
@@ -119,69 +111,59 @@ void AudioEngine::setSampleRate(const sample_rate_t sampleRate)
         return;
     }
 
-    if (m_sampleRate == sampleRate) {
+    IF_ASSERT_FAILED(outputSpec.audioChannelCount <= MAX_SUPPORTED_AUDIO_CHANNELS) {
         return;
     }
 
-    LOGI() << "Sample rate: " << sampleRate;
-
-    m_sampleRate = sampleRate;
-    m_mixer->mixedSource()->setSampleRate(sampleRate);
-
-    if (m_onReadBufferChanged) {
-        m_onReadBufferChanged(m_readBufferSize, m_sampleRate);
+    if (m_outputSpec == outputSpec) {
+        return;
     }
+
+    LOGI() << "[OutputSpec] sampleRate: " << outputSpec.sampleRate
+           << ", samplesPerChannel: " << outputSpec.samplesPerChannel
+           << ", audioChannelCount: " << outputSpec.audioChannelCount;
+
+    bool isBufferChanged = m_outputSpec.samplesPerChannel != outputSpec.samplesPerChannel;
+
+    m_outputSpec = outputSpec;
+
+    m_mixer->setOutputSpec(outputSpec);
+
+    if (isBufferChanged) {
+        updateBufferConstraints();
+    }
+
+    m_outputSpecChanged.send(outputSpec);
 }
 
-void AudioEngine::setReadBufferSize(const uint16_t readBufferSize)
+OutputSpec AudioEngine::outputSpec() const
 {
-    ONLY_AUDIO_WORKER_THREAD;
-
-    if (m_readBufferSize == readBufferSize) {
-        return;
-    }
-
-    LOGI() << "Read buffer size: " << readBufferSize;
-
-    m_readBufferSize = readBufferSize;
-    updateBufferConstraints();
-
-    if (m_onReadBufferChanged) {
-        m_onReadBufferChanged(m_readBufferSize, m_sampleRate);
-    }
+    return m_outputSpec;
 }
 
-void AudioEngine::setAudioChannelsCount(const audioch_t count)
+async::Channel<OutputSpec> AudioEngine::outputSpecChanged() const
 {
-    ONLY_AUDIO_WORKER_THREAD;
-
-    IF_ASSERT_FAILED(m_mixer) {
-        return;
-    }
-
-    LOGI() << "Audio channels: " << count;
-
-    m_mixer->setAudioChannelsCount(count);
+    return m_outputSpecChanged;
 }
 
 RenderMode AudioEngine::mode() const
 {
     ONLY_AUDIO_WORKER_THREAD;
 
-    return m_currentMode;
+    return m_mode;
 }
 
 void AudioEngine::setMode(const RenderMode newMode)
 {
     ONLY_AUDIO_WORKER_THREAD;
 
-    if (newMode == m_currentMode) {
+    if (newMode == m_mode) {
         return;
     }
 
-    m_currentMode = newMode;
+    m_mode = newMode;
 
-    switch (m_currentMode) {
+    switch (m_mode) {
     case RenderMode::RealTimeMode:
         m_buffer->setSource(m_mixer->mixedSource());
         m_mixer->setIsIdle(false);
@@ -201,14 +183,12 @@ void AudioEngine::setMode(const RenderMode newMode)
 
     updateBufferConstraints();
 
-    m_modeChanges.notify();
+    m_modeChanged.send(m_mode);
 }
 
-async::Notification AudioEngine::modeChanged() const
+async::Channel<RenderMode> AudioEngine::modeChanged() const
 {
-    ONLY_AUDIO_WORKER_THREAD;
-
-    return m_modeChanges;
+    return m_modeChanged;
 }
 
 MixerPtr AudioEngine::mixer() const
@@ -217,22 +197,34 @@ MixerPtr AudioEngine::mixer() const
     return m_mixer;
 }
 
+void AudioEngine::processAudioData()
+{
+    ONLY_AUDIO_WORKER_THREAD;
+    m_buffer->forward();
+}
+
+void AudioEngine::popAudioData(float* dest, size_t sampleCount)
+{
+    // driver thread
+    m_buffer->pop(dest, sampleCount);
+}
+
 void AudioEngine::updateBufferConstraints()
 {
     IF_ASSERT_FAILED(m_buffer) {
         return;
     }
 
-    if (m_readBufferSize == 0) {
+    if (m_outputSpec.samplesPerChannel == 0) {
         return;
     }
 
     samples_t minSamplesToReserve = 0;
 
-    if (m_currentMode == RenderMode::IdleMode) {
-        minSamplesToReserve = std::max(m_readBufferSize, m_renderConsts.minSamplesToReserveWhenIdle);
+    if (m_mode == RenderMode::IdleMode) {
+        minSamplesToReserve = std::max(m_outputSpec.samplesPerChannel, m_renderConsts.minSamplesToReserveWhenIdle);
     } else {
-        minSamplesToReserve = std::max(m_readBufferSize, m_renderConsts.minSamplesToReserveInRealtime);
+        minSamplesToReserve = std::max(m_outputSpec.samplesPerChannel, m_renderConsts.minSamplesToReserveInRealtime);
     }
 
     m_buffer->setMinSamplesPerChannelToReserve(minSamplesToReserve);

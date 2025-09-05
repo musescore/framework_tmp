@@ -46,7 +46,7 @@ public:
     bool isActive() const override;
     void setIsActive(const bool active) override;
 
-    void setSampleRate(unsigned int sampleRate) override;
+    void setOutputSpec(const OutputSpec& spec) override;
     unsigned int audioChannelsCount() const override;
     async::Channel<unsigned int> audioChannelsCountChanged() const override;
     samples_t process(float* buffer, samples_t samplesPerChannel) override;
@@ -62,7 +62,10 @@ public:
     bool readyToPlay() const override;
     async::Notification readyToPlayChanged() const override;
 
+    void processInput() override;
     InputProcessingProgress inputProcessingProgress() const override;
+
+    void clearCache() override;
 
 private:
     struct SynthCtx
@@ -85,8 +88,7 @@ private:
     synth::ISynthesizerPtr m_synth = nullptr;
     AudioInputParams m_params;
     async::Channel<AudioInputParams> m_paramsChanges;
-
-    samples_t m_sampleRate = 0;
+    OutputSpec m_outputSpec;
 };
 
 using EventAudioSourcePtr = std::shared_ptr<EventAudioSource>;

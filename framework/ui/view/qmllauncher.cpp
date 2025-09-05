@@ -34,9 +34,14 @@ bool QmlLauncher::open(const QString& uri)
     return true;
 }
 
+bool QmlLauncher::openSync(const QString& uri)
+{
+    return interactive()->openSync(UriQuery(uri.toStdString())).ret;
+}
+
 bool QmlLauncher::openApp(const QString& uri)
 {
-    interactive()->openApp(Uri(uri));
+    interactive()->openApp(UriQuery(uri.toStdString()));
     return true;
 }
 

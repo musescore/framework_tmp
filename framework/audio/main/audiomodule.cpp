@@ -24,26 +24,23 @@
 #include "ui/iuiengine.h"
 #include "global/modularity/ioc.h"
 
-#include "global/async/processevents.h"
-
-#include "internal/audioconfiguration.h"
 #include "audio/common/audiosanitizer.h"
 #include "audio/common/audiothreadsecurer.h"
-#include "internal/audiooutputdevicecontroller.h"
-
+#ifdef Q_OS_WASM
+#include "audio/common/rpc/platform/web/webrpcchannel.h"
+#include "audio/worker/platform/web/webaudioworker.h"
+#else
 #include "audio/common/rpc/platform/general/generalrpcchannel.h"
+#include "audio/worker/platform/general/generalaudioworker.h"
+#endif
+
+#include "internal/audioconfiguration.h"
+#include "internal/startaudiocontroller.h"
 #include "internal/playback.h"
 #include "internal/soundfontcontroller.h"
+#include "internal/audiooutputdevicecontroller.h"
 
 #include "diagnostics/idiagnosticspathsregister.h"
-#include "devtools/inputlag.h"
-
-// Temporarily for compatibility
-#include "audio/worker/audioworkermodule.h"
-#include "audio/worker/internal/audioengine.h"
-#include "audio/worker/internal/audiobuffer.h"
-#include "audio/worker/internal/synthesizers/synthresolver.h"
-#include "audio/worker/internal/audiothread.h"
 
 #include "log.h"
 
@@ -76,18 +73,6 @@ using namespace muse::audio;
 #ifdef Q_OS_WASM
 #include "audio/driver/platform/web/webaudiodriver.h"
 #endif
-
-static void measureInputLag(const float* buf, const size_t size)
-{
-    if (INPUT_LAG_TIMER_STARTED) {
-        for (size_t i = 0; i < size; ++i) {
-            if (!RealIsNull(buf[i])) {
-                STOP_INPUT_LAG_TIMER;
-                return;
-            }
-        }
-    }
-}
 
 static void audio_init_qrc()
 {
@@ -125,14 +110,20 @@ std::shared_ptr<IAudioDriver> makeLinuxAudioDriver()
 void AudioModule::registerExports()
 {
     m_configuration = std::make_shared<AudioConfiguration>(iocContext());
+    m_startAudioController = std::make_shared<StartAudioController>();
     m_audioOutputController = std::make_shared<AudioOutputDeviceController>(iocContext());
     m_mainPlayback = std::make_shared<Playback>(iocContext());
-    m_rpcChannel = std::make_shared<rpc::GeneralRpcChannel>();
+
     m_soundFontController = std::make_shared<SoundFontController>();
 
-    //! NOTE Temporarily for compatibility
-    m_workerModule = std::make_shared<worker::AudioWorkerModule>();
-    m_audioThread = std::make_shared<worker::AudioThread>();
+#ifdef Q_OS_WASM
+    m_rpcChannel = std::make_shared<rpc::WebRpcChannel>();
+    m_audioWorker = std::make_shared<worker::WebAudioWorker>(m_rpcChannel);
+#else
+    m_rpcChannel = std::make_shared<rpc::GeneralRpcChannel>();
+    m_audioWorker = std::make_shared<worker::GeneralAudioWorker>(m_rpcChannel);
+    m_audioWorker->registerExports();
+#endif
 
 #if defined(MUSE_MODULE_AUDIO_JACK)
     m_audioDriver = std::shared_ptr<IAudioDriver>(new JackAudioDriver());
@@ -159,13 +150,13 @@ void AudioModule::registerExports()
 #endif // MUSE_MODULE_AUDIO_JACK
 
     ioc()->registerExport<IAudioConfiguration>(moduleName(), m_configuration);
+    ioc()->registerExport<IStartAudioController>(moduleName(), m_startAudioController);
     ioc()->registerExport<IAudioThreadSecurer>(moduleName(), std::make_shared<AudioThreadSecurer>());
-    ioc()->registerExport<IAudioDriver>(moduleName(), m_audioDriver);
-    ioc()->registerExport<IPlayback>(moduleName(), m_mainPlayback);
     ioc()->registerExport<rpc::IRpcChannel>(moduleName(), m_rpcChannel);
+    ioc()->registerExport<worker::IAudioWorker>(moduleName(), m_audioWorker);
+    ioc()->registerExport<IAudioDriver>(moduleName(), m_audioDriver);
     ioc()->registerExport<ISoundFontController>(moduleName(), m_soundFontController);
-
-    m_workerModule->registerExports();
+    ioc()->registerExport<IPlayback>(moduleName(), m_mainPlayback);
 }
 
 void AudioModule::registerResources()
@@ -180,7 +171,6 @@ void AudioModule::registerUiTypes()
 
 void AudioModule::resolveImports()
 {
-    m_workerModule->resolveImports();
 }
 
 void AudioModule::onInit(const IApplication::RunMode& mode)
@@ -222,23 +212,23 @@ void AudioModule::onInit(const IApplication::RunMode& mode)
         return;
     }
 
-    m_workerModule->audioBuffer()->init(m_configuration->audioChannelsCount());
-
-    m_audioOutputController->init();
-
-    m_soundFontController->init();
-
     // rpc
+    m_rpcChannel->setupOnMain();
+#ifndef Q_OS_WASM
     m_rpcTimer.setInterval(16); // corresponding to 60 fps
     QObject::connect(&m_rpcTimer, &QTimer::timeout, [this]() {
         m_rpcChannel->process();
     });
     m_rpcTimer.start();
+#endif
 
+    m_audioOutputController->init();
+    m_soundFontController->init();
     m_mainPlayback->init();
 
-    // Setup audio driver
-    setupAudioDriver(mode);
+#ifndef Q_OS_WASM
+    m_startAudioController->startAudioProcessing(mode);
+#endif
 
     //! --- Diagnostics ---
     auto pr = ioc()->resolve<muse::diagnostics::IDiagnosticsPathsRegister>(moduleName());
@@ -255,104 +245,5 @@ void AudioModule::onDeinit()
     m_mainPlayback->deinit();
     m_rpcTimer.stop();
 
-    if (m_audioDriver->isOpened()) {
-        m_audioDriver->close();
-    }
-}
-
-void AudioModule::onDestroy()
-{
-    //! NOTE During deinitialization, objects that process events are destroyed,
-    //! it is better to destroy them on onDestroy, when no events should come anymore
-    if (m_audioThread->isRunning()) {
-        m_audioThread->stop([this]() {
-            ONLY_AUDIO_WORKER_THREAD;
-            m_workerModule->onDestroy();
-        });
-    }
-}
-
-void AudioModule::setupAudioDriver(const IApplication::RunMode& mode)
-{
-    IAudioDriver::Spec requiredSpec;
-    requiredSpec.sampleRate = m_configuration->sampleRate();
-    requiredSpec.format = IAudioDriver::Format::AudioF32;
-    requiredSpec.channels = m_configuration->audioChannelsCount();
-    requiredSpec.samples = m_configuration->driverBufferSize();
-
-    if (m_configuration->shouldMeasureInputLag()) {
-        requiredSpec.callback = [this](void* /*userdata*/, uint8_t* stream, int byteCount) {
-            auto samplesPerChannel = byteCount / (2 * sizeof(float));  // 2 == m_configuration->audioChannelsCount()
-            float* dest = reinterpret_cast<float*>(stream);
-            const std::shared_ptr<worker::AudioBuffer>& audioBuffer = m_workerModule->audioBuffer();
-            audioBuffer->pop(dest, samplesPerChannel);
-            measureInputLag(dest, samplesPerChannel * audioBuffer->audioChannelCount());
-        };
-    } else {
-        requiredSpec.callback = [this](void* /*userdata*/, uint8_t* stream, int byteCount) {
-            auto samplesPerChannel = byteCount / (2 * sizeof(float));
-            const std::shared_ptr<worker::AudioBuffer>& audioBuffer = m_workerModule->audioBuffer();
-            audioBuffer->pop(reinterpret_cast<float*>(stream), samplesPerChannel);
-        };
-    }
-
-    if (mode == IApplication::RunMode::GuiApp) {
-        m_audioDriver->init();
-
-        IAudioDriver::Spec activeSpec;
-        if (m_audioDriver->open(requiredSpec, &activeSpec)) {
-            setupAudioWorker(activeSpec);
-            return;
-        }
-
-        LOGE() << "audio output open failed";
-    }
-
-    setupAudioWorker(requiredSpec);
-}
-
-void AudioModule::setupAudioWorker(const IAudioDriver::Spec& activeSpec)
-{
-    worker::AudioEngine::RenderConstraints consts;
-    consts.minSamplesToReserveWhenIdle = m_configuration->minSamplesToReserve(RenderMode::IdleMode);
-    consts.minSamplesToReserveInRealtime = m_configuration->minSamplesToReserve(RenderMode::RealTimeMode);
-    consts.desiredAudioThreadNumber = m_configuration->desiredAudioThreadNumber();
-    consts.minTrackCountForMultithreading = m_configuration->minTrackCountForMultithreading();
-
-    auto workerSetup = [this, activeSpec, consts]() {
-        AudioSanitizer::setupWorkerThread();
-        ONLY_AUDIO_WORKER_THREAD;
-
-        //! NOTE It should be as early as possible
-        m_rpcChannel->initOnWorker();
-
-        m_workerModule->onPreInit(IApplication::RunMode::GuiApp);
-
-        // Setup audio engine
-        std::shared_ptr<worker::AudioBuffer> audioBuffer = m_workerModule->audioBuffer();
-        std::shared_ptr<worker::AudioEngine> audioEngine = m_workerModule->audioEngine();
-        audioEngine->init(audioBuffer, consts);
-        audioEngine->setAudioChannelsCount(m_configuration->audioChannelsCount());
-        audioEngine->setSampleRate(activeSpec.sampleRate);
-        audioEngine->setReadBufferSize(activeSpec.samples);
-
-        audioEngine->setOnReadBufferChanged([this](const samples_t samples, const sample_rate_t rate) {
-            msecs_t interval = m_configuration->audioWorkerInterval(samples, rate);
-            m_audioThread->setInterval(interval);
-        });
-
-        m_workerModule->synthResolver()->init(m_configuration->defaultAudioInputParams());
-
-        m_workerModule->onInit(IApplication::RunMode::GuiApp);
-    };
-
-    auto workerLoopBody = [this]() {
-        ONLY_AUDIO_WORKER_THREAD;
-        async::processEvents();
-        m_rpcChannel->process();
-        m_workerModule->audioBuffer()->forward();
-    };
-
-    msecs_t interval = m_configuration->audioWorkerInterval(activeSpec.samples, activeSpec.sampleRate);
-    m_audioThread->run(workerSetup, workerLoopBody, interval);
+    m_startAudioController->stopAudioProcessing();
 }

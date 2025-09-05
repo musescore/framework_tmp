@@ -129,7 +129,7 @@ bool InteractiveProvider::isSelectColorOpened() const
     return m_isSelectColorOpened;
 }
 
-RetVal<Val> InteractiveProvider::openSync(const UriQuery& q_)
+RetVal<Val> InteractiveProvider::openSync(const UriQuery& q)
 {
 #ifndef MUSE_MODULE_UI_SYNCINTERACTIVE_SUPPORTED
     NOT_SUPPORTED;
@@ -140,11 +140,6 @@ RetVal<Val> InteractiveProvider::openSync(const UriQuery& q_)
         return rv;
     }
 #endif
-
-    UriQuery q = q_;
-
-    //! NOTE Disable Dialog.exec()
-    q.set("sync", false);
 
     RetVal<Val> rv;
     QEventLoop loop;
@@ -375,7 +370,6 @@ void InteractiveProvider::fillExtData(QmlLaunchData* data, const UriQuery& q, co
     }
 
     data->setValue("uri", QString::fromStdString(VIEWER_URI.toString()));
-    data->setValue("sync", params.value("sync", false));
     data->setValue("params", params);
 }
 
@@ -386,7 +380,6 @@ void InteractiveProvider::fillData(QmlLaunchData* data, const Uri& uri, const QV
     data->setValue("type", meta.type);
     data->setValue("uri", QString::fromStdString(uri.toString()));
     data->setValue("params", params);
-    data->setValue("sync", params.value("sync", false));
     data->setValue("modal", params.value("modal", ""));
 }
 
@@ -639,8 +632,12 @@ void InteractiveProvider::onOpen(const QVariant& type, const QVariant& objectId,
     }
 
     if (ContainerType::PrimaryPage == containerType) {
-        m_stack.clear();
-        m_stack.push(m_openingObject);
+        // Replace bottom item of the stack, because that always reflects the current PrimaryPage
+        if (m_stack.empty()) {
+            m_stack.push(m_openingObject);
+        } else {
+            m_stack[0] = m_openingObject;
+        }
     } else if (ContainerType::QmlDialog == containerType) {
         m_stack.push(m_openingObject);
     } else if (ContainerType::QWidgetDialog == containerType) {

@@ -24,7 +24,15 @@
 #include <cassert>
 
 #include "global/serialization/msgpack_forward.h"
-#include "../../audiotypes.h"
+#include "audio/common/audiotypes.h"
+
+#include "log.h"
+
+void pack_custom(muse::msgpack::Packer& p, const muse::audio::AudioWorkerConfig& value);
+void unpack_custom(muse::msgpack::UnPacker& p, muse::audio::AudioWorkerConfig& value);
+
+void pack_custom(muse::msgpack::Packer& p, const muse::audio::OutputSpec& value);
+void unpack_custom(muse::msgpack::UnPacker& p, muse::audio::OutputSpec& value);
 
 void pack_custom(muse::msgpack::Packer& p, const muse::audio::PlaybackStatus& value);
 void unpack_custom(muse::msgpack::UnPacker& p, muse::audio::PlaybackStatus& value);
@@ -114,6 +122,26 @@ void pack_custom(muse::msgpack::Packer& p, const muse::mpe::PlaybackData& value)
 void unpack_custom(muse::msgpack::UnPacker& p, muse::mpe::PlaybackData& value);
 
 #include "global/serialization/msgpack.h"
+
+inline void pack_custom(muse::msgpack::Packer& p, const muse::audio::AudioWorkerConfig& value)
+{
+    p.process(value.autoProcessOnlineSoundsInBackground);
+}
+
+inline void unpack_custom(muse::msgpack::UnPacker& p, muse::audio::AudioWorkerConfig& value)
+{
+    p.process(value.autoProcessOnlineSoundsInBackground);
+}
+
+inline void pack_custom(muse::msgpack::Packer& p, const muse::audio::OutputSpec& value)
+{
+    p.process(value.sampleRate, value.samplesPerChannel, value.audioChannelCount);
+}
+
+inline void unpack_custom(muse::msgpack::UnPacker& p, muse::audio::OutputSpec& value)
+{
+    p.process(value.sampleRate, value.samplesPerChannel, value.audioChannelCount);
+}
 
 inline void pack_custom(muse::msgpack::Packer& p, const muse::audio::PlaybackStatus& value)
 {
@@ -235,12 +263,12 @@ inline void unpack_custom(muse::msgpack::UnPacker& p, muse::audio::SoundTrackTyp
 
 inline void pack_custom(muse::msgpack::Packer& p, const muse::audio::SoundTrackFormat& value)
 {
-    p.process(value.type, value.sampleRate, value.samplesPerChannel, value.audioChannelsNumber, value.bitRate);
+    p.process(value.type, value.outputSpec, value.bitRate);
 }
 
 inline void unpack_custom(muse::msgpack::UnPacker& p, muse::audio::SoundTrackFormat& value)
 {
-    p.process(value.type, value.sampleRate, value.samplesPerChannel, value.audioChannelsNumber, value.bitRate);
+    p.process(value.type, value.outputSpec, value.bitRate);
 }
 
 inline void pack_custom(muse::msgpack::Packer& p, const muse::audio::AudioSignalVal& value)
@@ -275,13 +303,13 @@ inline void unpack_custom(muse::msgpack::UnPacker& p, muse::audio::InputProcessi
 
 inline void pack_custom(muse::msgpack::Packer& p, const muse::audio::InputProcessingProgress::StatusInfo& value)
 {
-    p.process(static_cast<uint8_t>(value.status), value.errcode);
+    p.process(static_cast<uint8_t>(value.status), value.errorCode, value.errorText);
 }
 
 inline void unpack_custom(muse::msgpack::UnPacker& p, muse::audio::InputProcessingProgress::StatusInfo& value)
 {
     uint8_t status = 0;
-    p.process(status, value.errcode);
+    p.process(status, value.errorCode, value.errorText);
     value.status = static_cast<muse::audio::InputProcessingProgress::Status>(status);
 }
 
@@ -590,13 +618,23 @@ public:
     template<class ... Types>
     static ByteArray pack(const Options& opt, const Types&... args)
     {
-        return msgpack::pack(opt, args ...);
+        // clear but keep capacity
+        buffer.clear();
+        // makes sense if the reserve is greater than the current capacity
+        buffer.reserve(std::max(opt.rezerveSize, DEFAULT_CAPACITY));
+        msgpack::pack(buffer, args ...);
+
+        IF_ASSERT_FAILED(buffer.size() > 0) {
+            return ByteArray();
+        }
+
+        return ByteArray(&buffer[0], buffer.size());
     }
 
     template<class ... Types>
     static ByteArray pack(const Types&... args)
     {
-        return msgpack::pack(args ...);
+        return RpcPacker::pack(Options {}, args ...);
     }
 
     template<class ... Types>
@@ -604,5 +642,8 @@ public:
     {
         return msgpack::unpack(data, args ...);
     }
+
+    static constexpr size_t DEFAULT_CAPACITY = 1024 * 200;
+    static inline thread_local std::vector<uint8_t> buffer = {};
 };
 }
