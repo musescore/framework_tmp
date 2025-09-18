@@ -205,9 +205,6 @@ else()
         ${CMAKE_CURRENT_LIST_DIR}/internal/systeminfo.cpp
         ${CMAKE_CURRENT_LIST_DIR}/internal/systeminfo.h
 
-        ${CMAKE_CURRENT_LIST_DIR}/io/internal/filesystem.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/io/internal/filesystem.h
-
         ${CMAKE_CURRENT_LIST_DIR}/deprecated/xmlreader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/deprecated/xmlreader.h
         ${CMAKE_CURRENT_LIST_DIR}/deprecated/xmlwriter.cpp
@@ -225,6 +222,18 @@ else()
     endif()
 
     include(GetPlatformInfo)
+
+    if (OS_IS_WASM)
+        set(MODULE_SRC ${MODULE_SRC}
+            ${CMAKE_CURRENT_LIST_DIR}/io/internal/memfilesystem.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/io/internal/memfilesystem.h
+        )
+    else()
+        set(MODULE_SRC ${MODULE_SRC}
+            ${CMAKE_CURRENT_LIST_DIR}/io/internal/filesystem.cpp
+            ${CMAKE_CURRENT_LIST_DIR}/io/internal/filesystem.h
+        )
+    endif()
 
     if (OS_IS_MAC)
         set(MODULE_SRC ${MODULE_SRC}

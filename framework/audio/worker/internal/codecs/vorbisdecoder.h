@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2021 MuseScore BVBA and others
+ * Copyright (C) 2025 MuseScore BVBA and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -19,28 +19,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "updatescenariostub.h"
 
-using namespace muse::update;
+#pragma once
 
-bool UpdateScenarioStub::needCheckForUpdate() const
+#include <string>
+#include <vector>
+
+namespace muse::audio::codec {
+class VorbisDecoder
 {
-    return false;
-}
+public:
+    VorbisDecoder() = default;
 
-muse::async::Promise<muse::Ret> UpdateScenarioStub::checkForUpdate(bool)
-{
-    return muse::async::make_promise<Ret>([](auto, auto) {
-        return muse::async::Promise<muse::Ret>::dummy_result();
-    });
-}
-
-bool UpdateScenarioStub::hasUpdate() const
-{
-    return false;
-}
-
-muse::Ret UpdateScenarioStub::showUpdate()
-{
-    return muse::make_ok();
+    static int decode_memory(const unsigned char* mem, unsigned int len, short** output, unsigned int* channels = nullptr,
+                             unsigned int* sample_rate = nullptr);
+    static int decode_file(const std::string& filepath, std::vector<float>& output, unsigned int* channels = nullptr,
+                           unsigned int* sample_rate = nullptr);
+};
 }

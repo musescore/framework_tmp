@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2021 MuseScore BVBA and others
+ * Copyright (C) 2025 MuseScore BVBA and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -19,28 +19,18 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "updatescenariostub.h"
+#pragma once
 
-using namespace muse::update;
+#include "global/types/retval.h"
+#include "global/io/path.h"
+#include "global/async/promise.h"
 
-bool UpdateScenarioStub::needCheckForUpdate() const
+namespace muse::audio::worker {
+//! NOTE Temporary class for testing
+class NetworkSFLoader
 {
-    return false;
-}
+public:
 
-muse::async::Promise<muse::Ret> UpdateScenarioStub::checkForUpdate(bool)
-{
-    return muse::async::make_promise<Ret>([](auto, auto) {
-        return muse::async::Promise<muse::Ret>::dummy_result();
-    });
-}
-
-bool UpdateScenarioStub::hasUpdate() const
-{
-    return false;
-}
-
-muse::Ret UpdateScenarioStub::showUpdate()
-{
-    return muse::make_ok();
+    static async::Promise<RetVal<io::path_t> > load();
+};
 }
