@@ -29,16 +29,18 @@
 #ifdef Q_OS_WASM
 #include "audio/common/rpc/platform/web/webrpcchannel.h"
 #include "audio/worker/platform/web/webaudioworker.h"
+#include "platform/web/websoundfontcontroller.h"
 #else
 #include "audio/common/rpc/platform/general/generalrpcchannel.h"
 #include "audio/worker/platform/general/generalaudioworker.h"
+#include "platform/general/generalsoundfontcontroller.h"
 #endif
 
 #include "internal/audioconfiguration.h"
 #include "internal/startaudiocontroller.h"
 #include "internal/playback.h"
-#include "internal/soundfontcontroller.h"
 #include "internal/audiooutputdevicecontroller.h"
+#include "internal/audiodrivercontroller.h"
 
 #include "diagnostics/idiagnosticspathsregister.h"
 
@@ -47,32 +49,6 @@
 using namespace muse;
 using namespace muse::modularity;
 using namespace muse::audio;
-
-#ifdef MUSE_MODULE_AUDIO_JACK
-#include "audio/driver/platform/jack/jackaudiodriver.h"
-#endif
-
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-#include <QtEnvironmentVariables>
-#include "audio/driver/platform/lin/alsaaudiodriver.h"
-#ifdef MUSE_PIPEWIRE_AUDIO_DRIVER
-#include "audio/driver/platform/lin/pwaudiodriver.h"
-#endif
-#endif
-
-#ifdef Q_OS_WIN
-//#include "audio/driver/platform/win/winmmdriver.h"
-//#include "audio/driver/platform/win/wincoreaudiodriver.h"
-#include "audio/driver/platform/win/wasapiaudiodriver.h"
-#endif
-
-#ifdef Q_OS_MACOS
-#include "audio/driver/platform/osx/osxaudiodriver.h"
-#endif
-
-#ifdef Q_OS_WASM
-#include "audio/driver/platform/web/webaudiodriver.h"
-#endif
 
 static void audio_init_qrc()
 {
@@ -89,72 +65,31 @@ std::string AudioModule::moduleName() const
     return "audio";
 }
 
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-std::shared_ptr<IAudioDriver> makeLinuxAudioDriver()
-{
-#if defined(MUSE_PIPEWIRE_AUDIO_DRIVER)
-    if (!qEnvironmentVariableIsSet("MUSESCORE_FORCE_ALSA")) {
-        auto driver = std::make_shared<PwAudioDriver>();
-        if (driver->connectedToPwServer()) {
-            LOGI() << "Using audio driver: Pipewire";
-            return driver;
-        }
-    }
-#endif // MUSE_PIPEWIRE_AUDIO_DRIVER
-    LOGI() << "Using audio driver: ALSA";
-    return std::make_shared<AlsaAudioDriver>();
-}
-
-#endif // Q_OS_LINUX || Q_OS_FREEBSD
-
 void AudioModule::registerExports()
 {
     m_configuration = std::make_shared<AudioConfiguration>(iocContext());
     m_startAudioController = std::make_shared<StartAudioController>();
     m_audioOutputController = std::make_shared<AudioOutputDeviceController>(iocContext());
     m_mainPlayback = std::make_shared<Playback>(iocContext());
-
-    m_soundFontController = std::make_shared<SoundFontController>();
+    m_audioDriverController = std::make_shared<AudioDriverController>(iocContext());
 
 #ifdef Q_OS_WASM
     m_rpcChannel = std::make_shared<rpc::WebRpcChannel>();
     m_audioWorker = std::make_shared<worker::WebAudioWorker>(m_rpcChannel);
+    m_soundFontController = std::make_shared<WebSoundFontController>();
 #else
     m_rpcChannel = std::make_shared<rpc::GeneralRpcChannel>();
     m_audioWorker = std::make_shared<worker::GeneralAudioWorker>(m_rpcChannel);
     m_audioWorker->registerExports();
+    m_soundFontController = std::make_shared<GeneralSoundFontController>();
 #endif
-
-#if defined(MUSE_MODULE_AUDIO_JACK)
-    m_audioDriver = std::shared_ptr<IAudioDriver>(new JackAudioDriver());
-#else
-
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    m_audioDriver = makeLinuxAudioDriver();
-#endif
-
-#ifdef Q_OS_WIN
-    //m_audioDriver = std::shared_ptr<IAudioDriver>(new WinmmDriver());
-    //m_audioDriver = std::shared_ptr<IAudioDriver>(new CoreAudioDriver());
-    m_audioDriver = std::shared_ptr<IAudioDriver>(new WasapiAudioDriver());
-#endif
-
-#ifdef Q_OS_MACOS
-    m_audioDriver = std::shared_ptr<IAudioDriver>(new OSXAudioDriver());
-#endif
-
-#ifdef Q_OS_WASM
-    m_audioDriver = std::shared_ptr<IAudioDriver>(new WebAudioDriver());
-#endif
-
-#endif // MUSE_MODULE_AUDIO_JACK
 
     ioc()->registerExport<IAudioConfiguration>(moduleName(), m_configuration);
     ioc()->registerExport<IStartAudioController>(moduleName(), m_startAudioController);
     ioc()->registerExport<IAudioThreadSecurer>(moduleName(), std::make_shared<AudioThreadSecurer>());
     ioc()->registerExport<rpc::IRpcChannel>(moduleName(), m_rpcChannel);
     ioc()->registerExport<worker::IAudioWorker>(moduleName(), m_audioWorker);
-    ioc()->registerExport<IAudioDriver>(moduleName(), m_audioDriver);
+    ioc()->registerExport<IAudioDriverController>(moduleName(), m_audioDriverController);
     ioc()->registerExport<ISoundFontController>(moduleName(), m_soundFontController);
     ioc()->registerExport<IPlayback>(moduleName(), m_mainPlayback);
 }
@@ -207,6 +142,8 @@ void AudioModule::onInit(const IApplication::RunMode& mode)
 
     // Init configuration
     m_configuration->init();
+
+    m_audioDriverController->init();
 
     if (mode == IApplication::RunMode::AudioPluginRegistration) {
         return;

@@ -19,34 +19,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include "websoundfontcontroller.h"
 
-#pragma once
+#include "audio/common/rpc/rpcpacker.h"
 
-#include "global/async/asyncable.h"
+using namespace muse::audio;
+using namespace muse::audio::rpc;
 
-#include "global/modularity/ioc.h"
-#include "audio/main/iaudioconfiguration.h"
-#include "audio/iaudiodrivercontroller.h"
-#include "audio/common/rpc/irpcchannel.h"
-
-namespace muse::audio {
-class AudioOutputDeviceController : public Injectable, public async::Asyncable
+void WebSoundFontController::init()
 {
-    Inject<IAudioConfiguration> configuration = { this };
-    Inject<IAudioDriverController> audioDriverController = { this };
-    Inject<rpc::IRpcChannel> rpcChannel = { this };
+    // noop
+}
 
-public:
-
-    AudioOutputDeviceController(const modularity::ContextPtr& iocCtx)
-        : Injectable(iocCtx) {}
-
-    void init();
-
-private:
-    void checkConnection();
-    void onOutputDeviceChanged();
-
-    IAudioDriverPtr audioDriver() const;
-};
+void WebSoundFontController::addSoundFont(const synth::SoundFontUri& uri)
+{
+    channel()->send(rpc::make_request(Method::AddSoundFont, RpcPacker::pack(uri)));
 }

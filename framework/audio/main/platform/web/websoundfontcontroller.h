@@ -19,34 +19,23 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
 #pragma once
 
-#include "global/async/asyncable.h"
+#include "../../isoundfontcontroller.h"
 
 #include "global/modularity/ioc.h"
-#include "audio/main/iaudioconfiguration.h"
-#include "audio/iaudiodrivercontroller.h"
 #include "audio/common/rpc/irpcchannel.h"
 
 namespace muse::audio {
-class AudioOutputDeviceController : public Injectable, public async::Asyncable
+class WebSoundFontController : public ISoundFontController
 {
-    Inject<IAudioConfiguration> configuration = { this };
-    Inject<IAudioDriverController> audioDriverController = { this };
-    Inject<rpc::IRpcChannel> rpcChannel = { this };
+    Inject<rpc::IRpcChannel> channel;
 
 public:
+    WebSoundFontController() = default;
 
-    AudioOutputDeviceController(const modularity::ContextPtr& iocCtx)
-        : Injectable(iocCtx) {}
+    void init() override;
 
-    void init();
-
-private:
-    void checkConnection();
-    void onOutputDeviceChanged();
-
-    IAudioDriverPtr audioDriver() const;
+    void addSoundFont(const synth::SoundFontUri& uri) override;
 };
 }

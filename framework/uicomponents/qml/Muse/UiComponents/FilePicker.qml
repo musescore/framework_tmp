@@ -31,7 +31,8 @@ Item {
     enum PickerType {
         File,
         Directory,
-        MultipleDirectories
+        MultipleDirectories,
+        Any
     }
     property int pickerType: FilePicker.PickerType.File
 
@@ -40,6 +41,9 @@ Item {
     property alias dialogTitle: filePickerModel.title
     property alias filter: filePickerModel.filter
     property alias dir: filePickerModel.dir
+
+    property int buttonType: FlatButton.IconOnly
+    property int orientation: Qt.Vertical
 
     property NavigationPanel navigation: null
     property int navigationRowOrderStart: 0
@@ -89,6 +93,10 @@ Item {
             Layout.alignment: Qt.AlignVCenter
             icon: IconCode.OPEN_FILE
 
+            text: qsTrc("ui", "Browse")
+            buttonType: root.buttonType
+            orientation: root.orientation
+
             navigation.name: "FilePickerButton"
             navigation.panel: root.navigation
             navigation.row: root.navigationRowOrderStart
@@ -118,6 +126,14 @@ Item {
                 case FilePicker.PickerType.MultipleDirectories:{
                     var selectedDirectories = filePickerModel.selectMultipleDirectories(root.path)
                     root.pathEdited(selectedDirectories)
+                    break
+                }
+                case FilePicker.PickerType.Any:{
+                    var selectedAny = filePickerModel.selectAny()
+                    if (Boolean(selectedAny)) {
+                        root.pathEdited(selectedAny)
+                    }
+
                     break
                 }
                 }

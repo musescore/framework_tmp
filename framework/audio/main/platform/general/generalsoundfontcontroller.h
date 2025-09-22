@@ -22,18 +22,18 @@
 
 #pragma once
 
-#include "../isoundfontcontroller.h"
+#include "../../isoundfontcontroller.h"
 
 #include "global/async/asyncable.h"
 
 #include "global/modularity/ioc.h"
 #include "global/iinteractive.h"
 #include "global/io/ifilesystem.h"
-#include "../iaudioconfiguration.h"
+#include "../../iaudioconfiguration.h"
 #include "audio/common/rpc/irpcchannel.h"
 
 namespace muse::audio {
-class SoundFontController : public ISoundFontController, public async::Asyncable
+class GeneralSoundFontController : public ISoundFontController, public async::Asyncable
 {
     Inject<IInteractive> interactive;
     Inject<IAudioConfiguration> configuration;
@@ -41,19 +41,19 @@ class SoundFontController : public ISoundFontController, public async::Asyncable
     Inject<rpc::IRpcChannel> channel;
 
 public:
-    SoundFontController() = default;
+    GeneralSoundFontController() = default;
 
-    void init();
+    void init() override;
 
-    void addSoundFont(const synth::SoundFontPath& path) override;
+    void addSoundFont(const synth::SoundFontUri& uri) override;
 
 private:
 
-    Ret doAddSoundFont(const synth::SoundFontPath& src, const synth::SoundFontPath& dst);
+    Ret doAddSoundFont(const io::path_t& src, const io::path_t& dst);
 
-    RetVal<synth::SoundFontPath> resolveInstallationPath(const synth::SoundFontPath& path) const;
+    RetVal<io::path_t> resolveInstallationPath(const io::path_t& path) const;
 
     void loadSoundFonts();
-    void loadSoundFonts(const synth::SoundFontPaths& paths);
+    void loadSoundFonts(const std::vector<io::path_t>& paths);
 };
 }
