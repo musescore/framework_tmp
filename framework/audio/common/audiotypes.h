@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2021 MuseScore BVBA and others
+ * Copyright (C) 2021 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -122,7 +122,7 @@ struct SoundTrackFormat {
     }
 };
 
-struct AudioWorkerConfig {
+struct AudioEngineConfig {
     bool autoProcessOnlineSoundsInBackground = false;
 };
 
@@ -133,8 +133,8 @@ using AudioResourceVendor = std::string;
 using AudioResourceAttributes = std::map<String, String>;
 using AudioUnitConfig = std::map<std::string, std::string>;
 
-static const String PLAYBACK_SETUP_DATA_ATTRIBUTE("playbackSetupData");
-static const String CATEGORIES_ATTRIBUTE("categories");
+static const String PLAYBACK_SETUP_DATA_ATTRIBUTE(u"playbackSetupData");
+static const String CATEGORIES_ATTRIBUTE(u"categories");
 
 enum class AudioResourceType {
     Undefined = -1,

@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2025 MuseScore BVBA and others
+ * Copyright (C) 2025 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -21,7 +21,7 @@
  */
 #pragma once
 
-#include "audio/worker/internal/abstracteventsequencer.h"
+#include "audio/engine/internal/abstracteventsequencer.h"
 #include "imusesamplertracks.h"
 
 #include "internal/apitypes.h"
@@ -70,7 +70,7 @@ struct std::less<MuseSamplerEvent>
 };
 
 namespace muse::musesampler {
-class MuseSamplerSequencer : public audio::worker::AbstractEventSequencer<mpe::NoteEvent, AuditionStartNoteEvent, AuditionStopNoteEvent,
+class MuseSamplerSequencer : public audio::engine::AbstractEventSequencer<mpe::NoteEvent, AuditionStartNoteEvent, AuditionStopNoteEvent,
                                                                           AuditionCCEvent>
 {
 public:

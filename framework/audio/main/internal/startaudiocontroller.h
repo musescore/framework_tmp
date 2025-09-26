@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2025 MuseScore BVBA and others
+ * Copyright (C) 2025 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -25,14 +25,14 @@
 
 #include "global/modularity/ioc.h"
 #include "../iaudioconfiguration.h"
-#include "audio/worker/iaudioworker.h"
+#include "audio/engine/iaudioworker.h"
 #include "../../iaudiodrivercontroller.h"
 
 namespace muse::audio {
 class StartAudioController : public IStartAudioController
 {
     Inject<IAudioConfiguration> configuration;
-    Inject<worker::IAudioWorker> audioWorker;
+    Inject<engine::IAudioWorker> audioWorker;
     Inject<IAudioDriverController> audioDriverController;
 
 public:

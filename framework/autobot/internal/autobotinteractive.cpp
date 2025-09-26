@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2021 MuseScore BVBA and others
+ * Copyright (C) 2021 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -95,7 +95,7 @@ async::Promise<IInteractive::Result> AutobotInteractive::error(const std::string
     return m_real->error(contentTitle, text, buttons, defBtn, options, dialogTitle);
 }
 
-void AutobotInteractive::showProgress(const std::string& title, Progress* progress)
+void AutobotInteractive::showProgress(const std::string& title, Progress progress)
 {
     m_real->showProgress(title, progress);
 }
@@ -107,9 +107,9 @@ async::Promise<io::path_t> AutobotInteractive::selectOpeningFile(const std::stri
 }
 
 io::path_t AutobotInteractive::selectOpeningFileSync(const std::string& title, const io::path_t& dir,
-                                                     const std::vector<std::string>& filter)
+                                                     const std::vector<std::string>& filter, const int options)
 {
-    return m_real->selectOpeningFileSync(title, dir, filter);
+    return m_real->selectOpeningFileSync(title, dir, filter, options);
 }
 
 io::path_t AutobotInteractive::selectSavingFileSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,

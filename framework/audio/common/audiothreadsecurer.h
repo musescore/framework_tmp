@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2021 MuseScore BVBA and others
+ * Copyright (C) 2021 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -31,8 +31,8 @@ class AudioThreadSecurer : public IAudioThreadSecurer
 public:
     bool isMainThread() const override;
     std::thread::id mainThreadId() const override;
-    bool isAudioWorkerThread() const override;
-    std::thread::id workerThreadId() const override;
+    bool isAudioEngineThread() const override;
+    std::thread::id audioEngineThreadId() const override;
 };
 }
 

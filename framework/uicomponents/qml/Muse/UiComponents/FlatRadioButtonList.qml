@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2023 MuseScore BVBA and others
+ * Copyright (C) 2023 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -58,10 +58,14 @@ RadioButtonGroup {
 
         transparent: root.transparent
 
+        toolTipTitle: modelData.title ?? ""
+        toolTipDescription: modelData.description ?? ""
+
         navigation.name: "FlatRadioButtonList_" + (Boolean(text) ? text : modelData.title)
         navigation.panel: root.navigationPanel
         navigation.row: root.navigationRowStart + 1 + model.index
         navigation.accessible.name: root.accessibleName + " " + (Boolean(text) ? text : modelData.title)
+        navigation.accessible.description:  modelData.description ?? ""
 
         onToggled: {
             root.toggled(modelData.value)

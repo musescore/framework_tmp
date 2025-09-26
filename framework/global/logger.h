@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2021 MuseScore BVBA and others
+ * Copyright (C) 2021 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -33,6 +33,7 @@ using Level = kors::logger::Level;
 using Color = kors::logger::Color;
 using LogMsg = kors::logger::LogMsg;
 using LogLayout = kors::logger::LogLayout;
+using IThreadNameProvider = kors::logger::IThreadNameProvider;
 using LogDest = kors::logger::LogDest;
 using ConsoleLogDest = kors::logger::ConsoleLogDest;
 using FileLogDest = kors::logger::FileLogDest;

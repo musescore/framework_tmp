@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2025 MuseScore BVBA and others
+ * Copyright (C) 2025 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -23,11 +23,13 @@
 
 #include "../../isoundfontcontroller.h"
 
+#include "global/async/asyncable.h"
+
 #include "global/modularity/ioc.h"
 #include "audio/common/rpc/irpcchannel.h"
 
 namespace muse::audio {
-class WebSoundFontController : public ISoundFontController
+class WebSoundFontController : public ISoundFontController, public async::Asyncable
 {
     Inject<rpc::IRpcChannel> channel;
 

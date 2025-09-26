@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2025 MuseScore BVBA and others
+ * Copyright (C) 2025 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -30,6 +30,7 @@
 #include "../types/flags.h"
 #include "../types/retval.h"
 #include "../types/uri.h"
+#include "../types/bytearray.h"
 #include "../io/path.h"
 
 void pack_custom(std::vector<uint8_t>& data, const size_t& value);
@@ -68,6 +69,10 @@ bool unpack_custom(muse::msgpack::Cursor& cursor, muse::RetVal2<T1, T2>& value);
 // Uri
 void pack_custom(std::vector<uint8_t>& data, const muse::Uri& value);
 bool unpack_custom(muse::msgpack::Cursor& cursor, muse::Uri& value);
+
+// ByteArray
+void pack_custom(std::vector<uint8_t>& data, const muse::ByteArray& value);
+bool unpack_custom(muse::msgpack::Cursor& cursor, muse::ByteArray& value);
 
 // path_t
 void pack_custom(std::vector<uint8_t>& data, const muse::io::path_t& value);
@@ -219,6 +224,17 @@ inline bool unpack_custom(muse::msgpack::Cursor& cursor, muse::Uri& value)
     bool ok = muse::msgpack::UnPacker::unpack(cursor, str);
     value = muse::Uri(str);
     return ok;
+}
+
+// ByteArray
+inline void pack_custom(std::vector<uint8_t>& data, const muse::ByteArray& value)
+{
+    muse::msgpack::Packer::pack(data, value.constVData());
+}
+
+inline bool unpack_custom(muse::msgpack::Cursor& cursor, muse::ByteArray& value)
+{
+    return muse::msgpack::UnPacker::unpack(cursor, value.vdata());
 }
 
 // path_t

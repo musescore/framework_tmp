@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2021 MuseScore BVBA and others
+ * Copyright (C) 2021 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -694,9 +694,12 @@ void DockBase::applySizeConstraints()
         window->setMinimumSize(minimumSize);
         window->setMaximumSize(maximumSize);
 
-        QSize winSize = adjustSizeByConstraints(window->frameGeometry().size(), minimumSize, maximumSize);
-        QRect winRect(window->dragRect().topLeft(), winSize);
-
+        const QSize winSize = adjustSizeByConstraints(window->frameGeometry().size(), minimumSize, maximumSize);
+#ifdef Q_OS_MACOS
+        window->setWidth(winSize.width());
+        window->setHeight(winSize.height());
+#endif
+        const QRect winRect(window->dragRect().topLeft(), winSize);
         window->setGeometry(winRect);
     }
 

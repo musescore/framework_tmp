@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2024 MuseScore BVBA and others
+ * Copyright (C) 2024 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -39,7 +39,8 @@ void GraphicsInfoModel::init()
     QString gApi = uiengine()->graphicsApiName();
 
     m_info = "\n";
-    m_info += "Graphics Api: " + gApi;
+    m_info += "Gui platform:  " + QGuiApplication::platformName() + "\n";
+    m_info += "Graphics Api:  " + gApi + "\n";
 
     emit infoChanged();
 }

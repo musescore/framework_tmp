@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2021 MuseScore BVBA and others
+ * Copyright (C) 2021 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -88,7 +88,7 @@ Ret RegisterAudioPluginsScenario::registerNewPlugins(io::paths_t newPluginPaths)
 
 void RegisterAudioPluginsScenario::processPluginsRegistration(const io::paths_t& pluginPaths)
 {
-    interactive()->showProgress(muse::trc("audio", "Scanning audio plugins"), &m_progress);
+    interactive()->showProgress(muse::trc("audio", "Scanning audio plugins"), m_progress);
 
     m_aborted = false;
     m_progress.start();

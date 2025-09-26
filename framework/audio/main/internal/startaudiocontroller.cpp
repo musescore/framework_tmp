@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2025 MuseScore BVBA and others
+ * Copyright (C) 2025 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -51,7 +51,7 @@ void StartAudioController::startAudioProcessing(const IApplication::RunMode& mod
 
     //! NOTE In the web, callback works via messages and is configured in the worker
 #ifndef Q_OS_WASM
-    worker::IAudioWorker* worker = audioWorker().get();
+    engine::IAudioWorker* worker = audioWorker().get();
     if (configuration()->shouldMeasureInputLag()) {
         requiredSpec.callback = [worker](void* /*userdata*/, uint8_t* stream, int byteCount) {
             auto samplesPerChannel = byteCount / (2 * sizeof(float));  // 2 == m_configuration->audioChannelsCount()
@@ -72,14 +72,14 @@ void StartAudioController::startAudioProcessing(const IApplication::RunMode& mod
 
         IAudioDriver::Spec activeSpec;
         if (audioDriver()->open(requiredSpec, &activeSpec)) {
-            audioWorker()->run(activeSpec.output, configuration()->workerConfig());
+            audioWorker()->run(activeSpec.output, configuration()->engineConfig());
             return;
         }
 
         LOGE() << "audio output open failed";
     }
 
-    audioWorker()->run(requiredSpec.output, configuration()->workerConfig());
+    audioWorker()->run(requiredSpec.output, configuration()->engineConfig());
 }
 
 void StartAudioController::stopAudioProcessing()

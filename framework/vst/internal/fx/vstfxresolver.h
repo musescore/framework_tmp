@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2021 MuseScore BVBA and others
+ * Copyright (C) 2021 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -23,7 +23,7 @@
 #ifndef MUSE_VST_VSTFXRESOLVER_H
 #define MUSE_VST_VSTFXRESOLVER_H
 
-#include "audio/worker/internal/fx/abstractfxresolver.h"
+#include "audio/engine/internal/fx/abstractfxresolver.h"
 
 #include "modularity/ioc.h"
 #include "../../ivstinstancesregister.h"

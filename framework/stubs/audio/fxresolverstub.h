@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2021 MuseScore BVBA and others
+ * Copyright (C) 2021 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -22,7 +22,7 @@
 #ifndef MU_AUDIO_FXRESOLVERSTUB_H
 #define MU_AUDIO_FXRESOLVERSTUB_H
 
-#include "audio/worker/ifxresolver.h"
+#include "audio/engine/ifxresolver.h"
 
 namespace muse::audio::fx {
 class FxResolverStub : public IFxResolver

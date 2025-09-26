@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2021 MuseScore BVBA and others
+ * Copyright (C) 2021 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -27,8 +27,8 @@
 #include "ui/iuiengine.h"
 
 #include "modularity/ioc.h"
-#include "audio/worker/isynthresolver.h"
-#include "audio/worker/ifxresolver.h"
+#include "audio/engine/isynthresolver.h"
+#include "audio/engine/ifxresolver.h"
 
 #include "audioplugins/iaudiopluginsscannerregister.h"
 #include "audioplugins/iaudiopluginmetareaderregister.h"

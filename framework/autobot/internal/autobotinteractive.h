@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2021 MuseScore BVBA and others
+ * Copyright (C) 2021 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -69,12 +69,13 @@ public:
                                  const std::string& dialogTitle = "") override;
 
     // progress
-    void showProgress(const std::string& title, Progress* progress) override;
+    void showProgress(const std::string& title, Progress progress) override;
 
     // files
     virtual async::Promise<io::path_t> selectOpeningFile(const std::string& title, const io::path_t& dir,
                                                          const std::vector<std::string>& filter) override;
-    io::path_t selectOpeningFileSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter) override;
+    io::path_t selectOpeningFileSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,
+                                     const int options = 0) override;
     io::path_t selectSavingFileSync(const std::string& title, const io::path_t& dir, const std::vector<std::string>& filter,
                                     bool confirmOverwrite = true) override;
 

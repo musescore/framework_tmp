@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2021 MuseScore BVBA and others
+ * Copyright (C) 2021 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -75,6 +75,11 @@ const UiActionList DiagnosticsActions::m_actions = {
              muse::ui::UiCtxAny,
              muse::shortcuts::CTX_ANY,
              TranslatableString("action", "Show engraving &undo stack")
+             ),
+    UiAction("diagnostic-show-engraving-style",
+             muse::ui::UiCtxAny,
+             muse::shortcuts::CTX_ANY,
+             TranslatableString("action", "Show engraving &style options list")
              ),
     UiAction("diagnostic-show-actions",
              muse::ui::UiCtxAny,

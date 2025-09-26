@@ -4,7 +4,7 @@
 # MuseScore
 # Music Composition & Notation
 #
-# Copyright (C) 2021 MuseScore BVBA and others
+# Copyright (C) 2021 MuseScore Limited and others
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 3 as
@@ -25,11 +25,7 @@ include(GetPlatformInfo)
 
 set(MODULE_LINK )
 if (OS_IS_WASM)
-    set(WEBWORKER_FACADE_MODE ON)
-
-    # worker exec
-    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/worker/platform/web audio_worker)
-
+    set(WEBENGINE_FACADE_MODE ON)
 else()
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/thirdparty/fluidsynth fluidsynth)
@@ -39,14 +35,14 @@ endif()
 
 include(common/audio_common.cmake)
 include(main/audio_main.cmake)
-include(worker/audio_worker.cmake)
+include(engine/audio_engine.cmake)
 include(driver/audio_driver.cmake)
 
 set(MODULE_SRC
 
     ${AUDIO_COMMON_SRC}
     ${AUDIO_MAIN_SRC}
-    ${AUDIO_WORKER_SRC}
+    ${AUDIO_ENGINE_SRC}
     ${AUDIO_DRIVER_SRC}
 
     # Common public
@@ -55,7 +51,7 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/devtools/inputlag.h
     )
 
-set(MODULE_LINK ${MODULE_LINK} ${AUDIO_WORKER_LINK})
+set(MODULE_LINK ${MODULE_LINK} ${AUDIO_ENGINE_LINK})
 
 if (QT_ADD_CONCURRENT)
     list(APPEND MODULE_LINK Qt::Concurrent)

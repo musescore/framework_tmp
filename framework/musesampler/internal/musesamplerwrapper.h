@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2022 MuseScore BVBA and others
+ * Copyright (C) 2022 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -25,7 +25,7 @@
 
 #include <memory>
 
-#include "audio/worker/internal/synthesizers/abstractsynthesizer.h"
+#include "audio/engine/internal/synthesizers/abstractsynthesizer.h"
 #include "async/channel.h"
 
 #include "libhandler.h"

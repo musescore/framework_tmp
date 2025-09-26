@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2025 MuseScore BVBA and others
+ * Copyright (C) 2025 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -27,7 +27,7 @@ namespace muse::audio {
 class AudioConfigurationStub : public IAudioConfiguration
 {
 public:
-    AudioWorkerConfig workerConfig() const override;
+    AudioEngineConfig engineConfig() const override;
 
     std::string currentAudioApi() const override;
     void setCurrentAudioApi(const std::string& name) override;

@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2021 MuseScore BVBA and others
+ * Copyright (C) 2021 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -28,7 +28,7 @@
 #include "modularity/imodulesetup.h"
 #include "global/async/asyncable.h"
 
-namespace muse::audio::worker  {
+namespace muse::audio::engine  {
 class IAudioWorker;
 }
 
@@ -64,7 +64,7 @@ private:
     std::shared_ptr<Playback> m_mainPlayback;
     std::shared_ptr<ISoundFontController> m_soundFontController;
 
-    std::shared_ptr<worker::IAudioWorker> m_audioWorker;
+    std::shared_ptr<engine::IAudioWorker> m_audioWorker;
 
     QTimer m_rpcTimer;
     std::shared_ptr<rpc::IRpcChannel> m_rpcChannel;
