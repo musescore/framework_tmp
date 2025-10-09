@@ -13,7 +13,7 @@ declare_muse_module_opt(ACTIONS ON)
 declare_muse_module_opt(AUDIO ON)
 option(MUSE_MODULE_AUDIO_JACK "Enable jack support" OFF)
 option(MUSE_MODULE_AUDIO_EXPORT "Enable audio export" ON)
-option(MUSE_MODULE_AUDIO_WORKER "Enable audio worker" OFF)
+option(MUSE_MODULE_AUDIO_WORKER_ENABLED "Enable audio worker" ON)
 
 declare_muse_module_opt(AUDIOPLUGINS ON)
 
@@ -58,6 +58,7 @@ declare_muse_module_opt(UI ON)
 option(MUSE_MODULE_UI_DISABLE_MODALITY "Disable dialogs modality for testing purpose" OFF)
 option(MUSE_MODULE_UI_SYSTEMDRAG_SUPPORTED "System drag supported" ON)
 option(MUSE_MODULE_UI_SYNCINTERACTIVE_SUPPORTED "Sync interactive supported" ON)
+option(MUSE_MODULE_UI_NAVIGATION_EXCLUDEPROJECT "Exclude the main project view from navigation" ON)
 
 declare_muse_module_opt(UPDATE ON)
 
