@@ -52,11 +52,10 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/view/selectableitemlistmodel.h
     ${CMAKE_CURRENT_LIST_DIR}/view/qmllistproperty.cpp
     ${CMAKE_CURRENT_LIST_DIR}/view/qmllistproperty.h
+    ${CMAKE_CURRENT_LIST_DIR}/view/windowview.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/view/windowview.h
     ${CMAKE_CURRENT_LIST_DIR}/view/popupview.cpp
     ${CMAKE_CURRENT_LIST_DIR}/view/popupview.h
-    ${CMAKE_CURRENT_LIST_DIR}/view/popupwindow/ipopupwindow.h
-    ${CMAKE_CURRENT_LIST_DIR}/view/popupwindow/popupwindow_qquickview.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/view/popupwindow/popupwindow_qquickview.h
     ${CMAKE_CURRENT_LIST_DIR}/view/dialogview.cpp
     ${CMAKE_CURRENT_LIST_DIR}/view/dialogview.h
     ${CMAKE_CURRENT_LIST_DIR}/view/dropdownview.cpp
@@ -122,8 +121,6 @@ endif()
 if(QT_SUPPORT)
     list(APPEND MODULE_LINK Qt::Widgets Qt::Quick)
 endif()
-
-set(MODULE_USE_UNITY OFF)
 
 setup_module()
 
