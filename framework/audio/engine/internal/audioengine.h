@@ -24,20 +24,16 @@
 
 #include <memory>
 #include <atomic>
+#include <mutex>
 
 #include "../iaudioengine.h"
 
 #include "global/types/ret.h"
 
-#include "global/modularity/ioc.h"
-#include "audio/common/rpc/irpcchannel.h"
-
 namespace muse::audio::engine {
 class AudioBuffer;
 class AudioEngine : public IAudioEngine
 {
-    Inject<rpc::IRpcChannel> rpcChannel;
-
 public:
     AudioEngine();
     ~AudioEngine();
@@ -62,6 +58,8 @@ public:
     void setMode(const RenderMode newMode) override;
     async::Channel<RenderMode> modeChanged() const override;
 
+    void execOperation(OperationType type, const Operation& func) override;
+
     MixerPtr mixer() const override;
 
     void processAudioData() override;
@@ -71,14 +69,19 @@ public:
 private:
 
     void updateBufferConstraints();
+    samples_t fillSilent(float* buffer, samples_t samplesPerChannel);
 
-    bool m_inited = false;
+    std::atomic<bool> m_inited = false;
 
     OutputSpec m_outputSpec;
     async::Channel<OutputSpec> m_outputSpecChanged;
 
-    RenderMode m_mode = RenderMode::Undefined;
+    std::atomic<RenderMode> m_mode = RenderMode::Undefined;
     async::Channel<RenderMode> m_modeChanged;
+
+    std::atomic<bool> m_processing = false;
+    std::atomic<OperationType> m_operationType = OperationType::Undefined;
+    std::mutex m_quickOperationWaitMutex;
 
     MixerPtr m_mixer = nullptr;
     std::shared_ptr<AudioBuffer> m_buffer = nullptr;
