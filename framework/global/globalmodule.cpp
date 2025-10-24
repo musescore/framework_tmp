@@ -31,10 +31,10 @@
 #include "profiler.h"
 
 #include "internal/baseapplication.h"
-#include "internal/invoker.h"
 #include "internal/cryptographichash.h"
 #include "internal/process.h"
 #include "internal/systeminfo.h"
+#include "internal/tickerprovider.h"
 
 #include "runtime.h"
 #include "async/processevents.h"
@@ -77,8 +77,6 @@ using namespace muse;
 using namespace muse::modularity;
 using namespace muse::io;
 
-std::shared_ptr<Invoker> GlobalModule::s_asyncInvoker = {};
-
 class ApplicationStub : public BaseApplication
 {
 public:
@@ -106,14 +104,15 @@ void GlobalModule::registerExports()
     }
 
     m_configuration = std::make_shared<GlobalConfiguration>(iocContext());
-    s_asyncInvoker = std::make_shared<Invoker>();
     m_systemInfo = std::make_shared<SystemInfo>();
+    m_tickerProvider = std::make_shared<TickerProvider>();
 
     ioc()->registerExport<IApplication>(moduleName(), m_application);
     ioc()->registerExport<IGlobalConfiguration>(moduleName(), m_configuration);
     ioc()->registerExport<ISystemInfo>(moduleName(), m_systemInfo);
     ioc()->registerExport<ICryptographicHash>(moduleName(), new CryptographicHash());
     ioc()->registerExport<IProcess>(moduleName(), new Process());
+    ioc()->registerExport<ITickerProvider>(moduleName(), m_tickerProvider);
     ioc()->registerExport<api::IApiRegister>(moduleName(), new api::ApiRegister());
 
 #ifdef Q_OS_WASM
@@ -232,13 +231,14 @@ void GlobalModule::onPreInit(const IApplication::RunMode& mode)
     Profiler* profiler = Profiler::instance();
     profiler->setup(profOpt, new MyPrinter());
 
-    //! --- Setup Invoker ---
+    //! --- Setup Ticker ---
+    m_tickerProvider->start();
 
-    Invoker::setup();
-
-    async::onMainThreadInvoke([](const std::function<void()>& f, bool isAlwaysQueued) {
-        s_asyncInvoker->invoke(f, isAlwaysQueued);
-    });
+    //! --- Setup Async ---
+    const std::thread::id thisThId = std::this_thread::get_id();
+    m_asyncTicker.start(1, [thisThId]() {
+        async::processMessages(thisThId);
+    }, Ticker::Mode::Repeat);
 
     //! --- Diagnostics ---
 #ifdef MUSE_MODULE_DIAGNOSTICS
@@ -280,18 +280,14 @@ void GlobalModule::onInit(const IApplication::RunMode&)
 
 void GlobalModule::onDeinit()
 {
-    invokeQueuedCalls();
+    m_tickerProvider->stop();
+    muse::async::terminate();
 
 #ifdef Q_OS_WIN
     if (m_endTimePeriod) {
         timeEndPeriod(1);
     }
 #endif
-}
-
-void GlobalModule::invokeQueuedCalls()
-{
-    s_asyncInvoker->invokeQueuedCalls();
 }
 
 void GlobalModule::setLoggerLevel(const muse::logger::Level& level)

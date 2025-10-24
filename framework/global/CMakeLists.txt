@@ -71,6 +71,9 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/configreader.h
     ${CMAKE_CURRENT_LIST_DIR}/uuid.cpp
     ${CMAKE_CURRENT_LIST_DIR}/uuid.h
+    ${CMAKE_CURRENT_LIST_DIR}/itickerprovider.h
+    ${CMAKE_CURRENT_LIST_DIR}/ticker.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ticker.h
 
     ${KORS_MODULARITY_SRC}
     ${CMAKE_CURRENT_LIST_DIR}/modularity/ioccontext.cpp
@@ -160,6 +163,8 @@ if (MUSE_THREADS_SUPPORT)
         ${CMAKE_CURRENT_LIST_DIR}/concurrency/taskscheduler.h
         ${CMAKE_CURRENT_LIST_DIR}/concurrency/concurrent.h
         ${CMAKE_CURRENT_LIST_DIR}/concurrency/threadutils.h
+        ${CMAKE_CURRENT_LIST_DIR}/concurrency/ringqueue.h
+        ${CMAKE_CURRENT_LIST_DIR}/concurrency/rpcqueue.h
     )
 endif()
 
@@ -197,12 +202,12 @@ else()
         ${CMAKE_CURRENT_LIST_DIR}/internal/interactive.h
         ${CMAKE_CURRENT_LIST_DIR}/internal/cryptographichash.cpp
         ${CMAKE_CURRENT_LIST_DIR}/internal/cryptographichash.h
-        ${CMAKE_CURRENT_LIST_DIR}/internal/invoker.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/internal/invoker.h
         ${CMAKE_CURRENT_LIST_DIR}/internal/process.cpp
         ${CMAKE_CURRENT_LIST_DIR}/internal/process.h
         ${CMAKE_CURRENT_LIST_DIR}/internal/systeminfo.cpp
         ${CMAKE_CURRENT_LIST_DIR}/internal/systeminfo.h
+        ${CMAKE_CURRENT_LIST_DIR}/internal/tickerprovider.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/internal/tickerprovider.h
 
         ${CMAKE_CURRENT_LIST_DIR}/deprecated/xmlreader.cpp
         ${CMAKE_CURRENT_LIST_DIR}/deprecated/xmlreader.h
