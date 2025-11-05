@@ -1,5 +1,4 @@
-#ifndef KORS_MODULARITY_INJECTABLE_H
-#define KORS_MODULARITY_INJECTABLE_H
+#pragma once
 
 #include <cassert>
 #include <functional>
@@ -12,7 +11,7 @@ class Injectable
 public:
     virtual ~Injectable() = default;
 
-    using GetContext = std::function<modularity::ContextPtr()>;
+    using GetContext = std::function<modularity::ContextPtr ()>;
 
     Injectable(const modularity::ContextPtr& ctx = nullptr)
         : m_ctx(ctx) {}
@@ -33,12 +32,10 @@ public:
             return m_ctx;
         }
 
-        if (m_inj) {
-            m_ctx = m_inj->iocContext();
-        }
-
         if (m_getCtx) {
             m_ctx = m_getCtx();
+        } else if (m_inj) {
+            m_ctx = m_inj->iocContext();
         }
 
         return m_ctx;
@@ -50,5 +47,3 @@ private:
     GetContext m_getCtx;
 };
 }
-
-#endif // KORS_MODULARITY_INJECTABLE_H

@@ -22,6 +22,7 @@
 #include "audiomodule.h"
 
 #include "ui/iuiengine.h"
+#include "ui/iuiactionsregister.h"
 #include "global/modularity/ioc.h"
 
 #include "audio/common/audiosanitizer.h"
@@ -31,17 +32,23 @@
 #include "platform/web/websoundfontcontroller.h"
 #else
 #include "audio/common/rpc/platform/general/generalrpcchannel.h"
-#include "audio/engine/platform/general/generalaudioworker.h"
 #include "platform/general/generalsoundfontcontroller.h"
 #endif
 
 #include "internal/audioconfiguration.h"
+#include "internal/audioactionscontroller.h"
+#include "internal/audiouiactions.h"
 #include "internal/startaudiocontroller.h"
 #include "internal/playback.h"
 #include "internal/audiooutputdevicecontroller.h"
 #include "internal/audiodrivercontroller.h"
 
 #include "diagnostics/idiagnosticspathsregister.h"
+
+#include "muse_framework_config.h"
+#ifdef MUSE_MODULE_AUDIO_ASIO
+#include "audio/driver/platform/win/asio/asiodiscovery.h"
+#endif
 
 #include "log.h"
 
@@ -67,6 +74,7 @@ std::string AudioModule::moduleName() const
 void AudioModule::registerExports()
 {
     m_configuration = std::make_shared<AudioConfiguration>(iocContext());
+    m_actionsController = std::make_shared<AudioActionsController>();
     m_audioOutputController = std::make_shared<AudioOutputDeviceController>(iocContext());
     m_mainPlayback = std::make_shared<Playback>(iocContext());
     m_audioDriverController = std::make_shared<AudioDriverController>(iocContext());
@@ -104,17 +112,22 @@ void AudioModule::registerUiTypes()
 
 void AudioModule::resolveImports()
 {
+    auto ar = ioc()->resolve<ui::IUiActionsRegister>(moduleName());
+    if (ar) {
+        ar->reg(std::make_shared<AudioUiActions>(m_actionsController));
+    }
 }
 
 void AudioModule::onInit(const IApplication::RunMode& mode)
 {
     m_configuration->init();
 
-    m_audioDriverController->init();
-
     if (mode == IApplication::RunMode::AudioPluginRegistration) {
         return;
     }
+
+    m_actionsController->init();
+    m_audioDriverController->init();
 
     // rpc
     m_rpcChannel->setupOnMain();
@@ -142,6 +155,11 @@ void AudioModule::onInit(const IApplication::RunMode& mode)
             pr->reg("soundfonts", p);
         }
     }
+
+#ifdef MUSE_MODULE_AUDIO_ASIO
+    AsioDiscovery d;
+    d.dump();
+#endif
 }
 
 void AudioModule::onDeinit()
