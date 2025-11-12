@@ -22,6 +22,8 @@
 
 #include "audiodrivercontroller.h"
 
+#include "muse_framework_config.h"
+
 #ifdef MUSE_MODULE_AUDIO_JACK
 #include "audio/driver/platform/jack/jackaudiodriver.h"
 #endif
@@ -37,8 +39,9 @@
 #ifdef Q_OS_WIN
 //#include "audio/driver/platform/win/winmmdriver.h"
 //#include "audio/driver/platform/win/wincoreaudiodriver.h"
-#include "audio/driver/platform/win/wasapiaudiodriver.h"
+//#include "audio/driver/platform/win/wasapiaudiodriver.h"
 #include "audio/driver/platform/win/wasapiaudiodriver2.h"
+#include "audio/driver/platform/win/asio/asioaudiodriver.h"
 #endif
 
 #ifdef Q_OS_MACOS
@@ -87,7 +90,19 @@ void AudioDriverController::init()
     //m_audioDriver = std::shared_ptr<IAudioDriver>(new WinmmDriver());
     //m_audioDriver = std::shared_ptr<IAudioDriver>(new CoreAudioDriver());
     //m_audioDriver = std::shared_ptr<IAudioDriver>(new WasapiAudioDriver());
-    m_audioDriver = std::shared_ptr<IAudioDriver>(new WasapiAudioDriver2());
+
+    std::string name = configuration()->currentAudioApi();
+    if (name == "ASIO") {
+#ifdef MUSE_MODULE_AUDIO_ASIO
+        m_audioDriver = std::shared_ptr<IAudioDriver>(new AsioAudioDriver());
+#else
+        LOGW() << "ASIO is selected but is not available, WASAPI will be used";
+        m_audioDriver = std::shared_ptr<IAudioDriver>(new WasapiAudioDriver2());
+#endif
+    } else {
+        m_audioDriver = std::shared_ptr<IAudioDriver>(new WasapiAudioDriver2());
+    }
+
 #endif
 
 #ifdef Q_OS_MACOS
@@ -118,7 +133,17 @@ muse::async::Notification AudioDriverController::currentAudioApiChanged() const
 
 std::vector<std::string> AudioDriverController::availableAudioApiList() const
 {
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#if defined(Q_OS_WIN)
+    std::vector<std::string> names {
+        "WASAPI"
+    };
+
+#ifdef MUSE_MODULE_AUDIO_ASIO
+    names.push_back("ASIO");
+#endif
+
+    return names;
+#elif defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
     std::vector<std::string> names {
         "ALSA Audio",
         "PipeWire",
