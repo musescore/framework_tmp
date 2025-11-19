@@ -42,25 +42,9 @@ if (OS_IS_WIN)
 
         add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/platform/win/asio/asiosdk)
 
-        set(AUDIO_ASIODRIVER_SRC
+        set(AUDIO_DRIVER_SRC ${AUDIO_DRIVER_SRC}
             ${CMAKE_CURRENT_LIST_DIR}/platform/win/asio/asioaudiodriver.cpp
             ${CMAKE_CURRENT_LIST_DIR}/platform/win/asio/asioaudiodriver.h
-        )
-
-        set_source_files_properties(
-            ${AUDIO_ASIODRIVER_SRC}
-            PROPERTIES
-            SKIP_UNITY_BUILD_INCLUSION ON
-            SKIP_PRECOMPILE_HEADERS ON
-        )
-
-        set(AUDIO_DRIVER_SRC
-            ${AUDIO_DRIVER_SRC}
-            ${AUDIO_ASIODRIVER_SRC}
-        )
-
-        set(AUDIO_DRIVER_INC
-            ${ASIO_SDK_SRC}
         )
 
         set(AUDIO_DRIVER_LINK
