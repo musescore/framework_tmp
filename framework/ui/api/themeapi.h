@@ -20,12 +20,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef MUSE_API_THEMEAPI_H
-#define MUSE_API_THEMEAPI_H
+#pragma once
 
 #include <QFont>
 #include <QPainter>
 #include <QProxyStyle>
+
+#include <qqmlintegration.h>
 
 #include "global/api/apiobject.h"
 #include "modularity/ioc.h"
@@ -37,6 +38,9 @@ class ProxyStyle;
 class ThemeApi : public api::ApiObject, public async::Asyncable
 {
     Q_OBJECT
+
+    QML_NAMED_ELEMENT(QmlTheme)
+    QML_UNCREATABLE("Must be created in C++ only")
 
     Q_PROPERTY(bool isDark READ isDark NOTIFY themeChanged)
 
@@ -264,5 +268,3 @@ private:
     ThemeApi* m_theme = nullptr;
 };
 }
-
-#endif // MUSE_API_THEMEAPI_H

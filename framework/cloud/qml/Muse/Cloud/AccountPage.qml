@@ -22,7 +22,7 @@
 import QtQuick 2.15
 
 import Muse.Ui 1.0
-import Muse.UiComponents 1.0
+import Muse.UiComponents
 import Muse.Cloud 1.0
 
 import "internal"
@@ -93,15 +93,15 @@ FocusScope {
         navigationSection: navSec
 
         onSignInRequested: function (cloudCode) {
-            cloudsModel.signIn(cloudCode)
+            Qt.callLater(cloudsModel.signIn, cloudCode)
         }
 
         onSignOutRequested: function (cloudCode) {
-            cloudsModel.signOut(cloudCode)
+            Qt.callLater(cloudsModel.signOut, cloudCode)
         }
 
         onCreateAccountRequested: function (cloudCode) {
-            cloudsModel.createAccount(cloudCode)
+            Qt.callLater(cloudsModel.createAccount, cloudCode)
         }
     }
 }

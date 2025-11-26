@@ -20,12 +20,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef MUSE_DOCK_DOCKPAGEVIEW_H
-#define MUSE_DOCK_DOCKPAGEVIEW_H
-
-#include "framework/uicomponents/view/qmllistproperty.h"
+#pragma once
 
 #include <QQuickItem>
+
+#include "uicomponents/qml/Muse/UiComponents/qmllistproperty.h"
 
 #include "modularity/ioc.h"
 #include "ui/inavigationcontroller.h"
@@ -36,7 +35,7 @@
 
 Q_MOC_INCLUDE("dockwindow/view/dockstatusbarview.h")
 
-namespace mu::ui {
+namespace muse::ui {
 class NavigationControl;
 }
 
@@ -144,5 +143,3 @@ private:
     QVariant m_tours;
 };
 }
-
-#endif // MUSE_DOCK_DOCKPAGEVIEW_H
