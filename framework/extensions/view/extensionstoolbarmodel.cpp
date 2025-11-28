@@ -21,9 +21,7 @@
  */
 #include "extensionstoolbarmodel.h"
 
-#include "uicomponents/view/toolbaritem.h"
-
-#include "log.h"
+#include "uicomponents/qml/Muse/UiComponents/toolbaritem.h"
 
 using namespace muse::extensions;
 using namespace muse::uicomponents;
