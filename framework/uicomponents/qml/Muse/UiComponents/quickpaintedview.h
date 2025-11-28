@@ -19,35 +19,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef MUSE_UI_NAVIGATIONPOPUPPANEL_H
-#define MUSE_UI_NAVIGATIONPOPUPPANEL_H
+#pragma once
 
-#include <QObject>
+#include <QQuickPaintedItem>
 
-#include "navigationpanel.h"
-
-namespace muse::ui {
-class NavigationPopupPanel : public NavigationPanel
+namespace muse::uicomponents {
+class QuickPaintedView : public QQuickPaintedItem
 {
     Q_OBJECT
-
-    Q_PROPERTY(NavigationControl * parentControl READ parentControl_property WRITE setParentControl NOTIFY parentControlChanged)
+    QML_ELEMENT;
+    QML_UNCREATABLE("Not creatable as it is abstract base class");
 
 public:
-    explicit NavigationPopupPanel(QObject* parent = nullptr);
+    QuickPaintedView(QQuickItem* parent = nullptr);
 
-    INavigationControl* parentControl() const;
-    NavigationControl* parentControl_property() const;
-
-public slots:
-    void setParentControl(NavigationControl* parentControl);
-    void setParentControl(INavigationControl* parentControl);
-
-signals:
-    void parentControlChanged();
-
-private:
-    INavigationControl* m_parentControl = nullptr;
+protected:
+    QSGNode* updatePaintNode(QSGNode* old, UpdatePaintNodeData* d) override;
 };
 }
-#endif // MUSE_UI_NAVIGATIONPOPUPPANEL_H

@@ -93,7 +93,7 @@ if(CC_IS_MINGW)
 endif()
 
 # Wasm-specific
-if(CC_IS_EMSCRIPTEN)
+if(CC_IS_EMCC)
     set(EMCC_CMAKE_TOOLCHAIN "" CACHE FILEPATH "Path to EMCC CMake Emscripten.cmake")
     set(EMCC_INCLUDE_PATH "." CACHE PATH "Path to EMCC include dir")
     set(EMCC_COMPILE_FLAGS "--bind -o .html --preload-file ../../files")
@@ -110,7 +110,7 @@ if(CC_IS_EMSCRIPTEN)
         ${EMCC_INCLUDE_PATH}/libcxx
         ${EMCC_INCLUDE_PATH}/libc
     )
-endif(CC_IS_EMSCRIPTEN)
+endif(CC_IS_EMCC)
 
 # Warnings
 include(SetupCompileWarnings)
