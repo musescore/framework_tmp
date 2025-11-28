@@ -21,8 +21,6 @@
  */
 #include "navigationpanel.h"
 
-#include <algorithm>
-
 #include "accessibility/iaccessible.h"
 #include "navigationsection.h"
 #include "translation.h"
@@ -47,14 +45,6 @@ NavigationPanel::~NavigationPanel()
 
 void NavigationPanel::componentComplete()
 {
-    if (isComponentCompleted()) {
-        return;
-    }
-
-    if (m_section) {
-        m_section->componentComplete();
-    }
-
     AbstractNavigation::componentComplete();
 }
 

@@ -39,6 +39,7 @@ public:
 
     /** APIDOC
      * Question buttons
+     * @global
      * @enum
      */
     enum ButtonCode {

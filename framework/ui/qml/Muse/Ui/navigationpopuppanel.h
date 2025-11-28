@@ -22,41 +22,34 @@
 
 #pragma once
 
+#include <QObject>
+
 #include <qqmlintegration.h>
 
-#include <QIcon>
-#include <QColor>
+#include "navigationpanel.h"
 
-#include "quickpaintedview.h"
-
-namespace muse::uicomponents {
-class IconView : public QuickPaintedView
+namespace muse::ui {
+class NavigationPopupPanel : public NavigationPanel
 {
     Q_OBJECT
-    QML_ELEMENT;
+    QML_ELEMENT
 
-    Q_PROPERTY(QVariant icon READ icon WRITE setIcon NOTIFY iconChanged)
-    Q_PROPERTY(QColor backgroundColor READ backgroundColor WRITE setBackgroundColor NOTIFY backgroundColorChanged)
+    Q_PROPERTY(NavigationControl* parentControl READ parentControl_property WRITE setParentControl NOTIFY parentControlChanged)
 
 public:
-    IconView(QQuickItem* parent = nullptr);
+    explicit NavigationPopupPanel(QObject* parent = nullptr);
 
-    QVariant icon() const;
-    QColor backgroundColor() const;
+    INavigationControl* parentControl() const;
+    NavigationControl* parentControl_property() const;
 
 public slots:
-    void setIcon(QVariant val);
-    void setBackgroundColor(const QColor& color);
+    void setParentControl(NavigationControl* parentControl);
+    void setParentControl(INavigationControl* parentControl);
 
 signals:
-    void iconChanged(const QVariant& icon);
-    void backgroundColorChanged(const QColor& color);
+    void parentControlChanged();
 
 private:
-    void paint(QPainter*) override;
-
-    QColor m_color;
-    QColor m_backgroundColor;
-    QIcon m_icon;
+    INavigationControl* m_parentControl = nullptr;
 };
 }

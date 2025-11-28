@@ -25,6 +25,8 @@
 
 #include "qmlaccessible.h"
 
+#include "log.h"
+
 using namespace muse;
 using namespace muse::ui;
 using namespace muse::accessibility;
@@ -45,7 +47,7 @@ bool AbstractNavigation::isComponentCompleted() const
 
 void AbstractNavigation::componentComplete()
 {
-    if (isComponentCompleted()) {
+    IF_ASSERT_FAILED(!isComponentCompleted()) {
         return;
     }
 
@@ -229,7 +231,7 @@ async::Channel<bool> AbstractNavigation::activeChanged() const
 void AbstractNavigation::onEvent(INavigation::EventPtr e)
 {
     NavigationEvent ev(e);
-    emit navigationEvent(QVariant::fromValue(ev));
+    emit navigationEvent(&ev);
 }
 
 QWindow* AbstractNavigation::window() const
