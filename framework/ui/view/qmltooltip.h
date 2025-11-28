@@ -19,14 +19,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-#pragma once
+#ifndef MUSE_UI_QMLTOOLTIP_H
+#define MUSE_UI_QMLTOOLTIP_H
 
 #include <QObject>
 #include <QQuickItem>
 #include <QTimer>
-
-#include <qqmlintegration.h>
 
 #include "async/asyncable.h"
 
@@ -38,8 +36,6 @@ namespace muse::ui {
 class QmlToolTip : public QObject, public Injectable, public async::Asyncable
 {
     Q_OBJECT
-    QML_ELEMENT;
-    QML_UNCREATABLE("Must be created in C++ only");
 
     Inject<IInteractiveProvider> interactiveProvider = { this };
     Inject<IUiConfiguration> uiConfiguration = { this };
@@ -78,3 +74,5 @@ private:
     bool m_shouldBeClosed = false;
 };
 }
+
+#endif // MUSE_UI_QMLTOOLTIP_H

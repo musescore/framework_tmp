@@ -42,8 +42,6 @@ qt_add_qml_module(muse_uicomponents_qml
         filtervalue.h
         iconview.cpp
         iconview.h
-        internal/focuslistener.cpp
-        internal/focuslistener.h
         internal/popupviewclosecontroller.cpp
         internal/popupviewclosecontroller.h
         itemmultiselectionmodel.cpp
@@ -56,8 +54,6 @@ qt_add_qml_module(muse_uicomponents_qml
         popupview.h
         qmllistproperty.cpp
         qmllistproperty.h
-        quickpaintedview.cpp
-        quickpaintedview.h
         selectableitemlistmodel.cpp
         selectableitemlistmodel.h
         selectmultipledirectoriesmodel.cpp
@@ -74,10 +70,9 @@ qt_add_qml_module(muse_uicomponents_qml
         validators/doubleinputvalidator.h
         validators/intinputvalidator.cpp
         validators/intinputvalidator.h
-        widgetview.cpp
-        widgetview.h
         windowview.cpp
         windowview.h
+
 
     QML_FILES
         Border.qml
@@ -174,7 +169,6 @@ qt_add_qml_module(muse_uicomponents_qml
 
     IMPORTS
         QtQuick
-        TARGET muse_ui_qml
 )
 
 if (OS_IS_MAC)
@@ -218,7 +212,7 @@ if (MUSE_MODULE_UI_DISABLE_MODALITY)
 endif()
 
 # Necessary for the auto-generated sources
-target_include_directories(muse_uicomponents_qml PRIVATE internal validators)
+target_include_directories(muse_uicomponents_qml PRIVATE validators)
 
 if (MUSE_MODULE_UI_TESTS)
     add_subdirectory(tests)

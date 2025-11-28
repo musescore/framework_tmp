@@ -27,8 +27,6 @@
 
 #include "private/TitleBar_p.h"
 #include "thirdparty/KDDockWidgets/src/private/Frame_p.h"
-
-#include "ui/qml/Muse/Ui/navigationsection.h"
 #include "uicomponents/qml/Muse/UiComponents/abstractmenumodel.h"
 
 #include "../docktypes.h"
@@ -191,7 +189,7 @@ void DockFrameModel::setIsHorizontalPanel(bool is)
 QObject* DockFrameModel::currentNavigationSection() const
 {
     auto dockPanel = currentDockProperty(DOCK_PANEL_PROPERTY).value<DockPanelView*>();
-    return dockPanel ? dockPanel->navigationSection_property() : nullptr;
+    return dockPanel ? dockPanel->navigationSection() : nullptr;
 }
 
 void DockFrameModel::updateNavigationSection()

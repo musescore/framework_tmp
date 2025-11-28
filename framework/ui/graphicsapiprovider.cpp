@@ -77,6 +77,8 @@ static const std::vector<std::string> BAD_MESSAGES = {
     "Framebuffer incomplete:"
 };
 
+GraphicsTestObject* GraphicsApiProvider::graphicsTestObject = nullptr;
+
 namespace muse::ui {
 class GraphicsProblemsDetectorLogDest : public LogDest
 {
@@ -122,13 +124,15 @@ GraphicsApiProvider::GraphicsApiProvider(const Version& appVersion)
             m_timer.stop();
         } else
         // success case
-        if (testObjectIsAlive && testObjectHasPainted) {
+        if (graphicsTestObject && graphicsTestObject->painted) {
             if (m_onResult) {
                 m_onResult(true);
             }
             m_timer.stop();
         }
     });
+
+    qmlRegisterType<GraphicsTestObject>("Muse.Ui", 1, 0, "GraphicsTestObject");
 }
 
 GraphicsApiProvider::~GraphicsApiProvider()
@@ -331,4 +335,37 @@ void GraphicsApiProvider::destroy()
     QTimer::singleShot(1, [self]() {
         delete self;
     });
+}
+
+// GraphicsTestObject
+
+GraphicsTestObject::GraphicsTestObject()
+{
+    setWidth(1);
+    setHeight(1);
+
+    GraphicsApiProvider::graphicsTestObject = this;
+}
+
+GraphicsTestObject::~GraphicsTestObject()
+{
+    GraphicsApiProvider::graphicsTestObject = nullptr;
+}
+
+void GraphicsTestObject::paint(QPainter*)
+{
+    LOGD() << "painted, graphics api: " << GraphicsApiProvider::graphicsApiName();
+
+    // just for test
+    // {
+    //     if (GraphicsApiProvider::graphicsApi() == GraphicsApiProvider::Direct3D11) {
+    //         LOGDA() << "Failed to build graphics pipeline state";
+    //     }
+
+    //     if (GraphicsApiProvider::graphicsApi() == GraphicsApiProvider::OpenGL) {
+    //         LOGDA() << "Failed to build graphics pipeline state";
+    //     }
+    // }
+
+    painted = true;
 }

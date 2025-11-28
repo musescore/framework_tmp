@@ -30,7 +30,7 @@
 #include "dockpanelview.h"
 #include "dockstatusbarview.h"
 
-#include "ui/qml/Muse/Ui/navigationcontrol.h"
+#include "ui/view/navigationcontrol.h"
 
 #include "log.h"
 

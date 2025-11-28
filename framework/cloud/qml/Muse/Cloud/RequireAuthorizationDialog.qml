@@ -19,12 +19,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import QtQuick
+import QtQuick 2.15
 
-import Muse.Ui
-import Muse.Ui.Dialogs
+import Muse.Ui 1.0
 import Muse.UiComponents
-import Muse.Cloud
+import Muse.Cloud 1.0
 
 StyledDialogView {
     id: root

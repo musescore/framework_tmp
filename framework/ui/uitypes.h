@@ -19,17 +19,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-#pragma once
+#ifndef MUSE_UI_UITYPES_H
+#define MUSE_UI_UITYPES_H
 
 #include <vector>
-
 #include <QString>
 #include <QMetaType>
 #include <QMap>
 #include <QQuickItem>
-
-#include <qqmlintegration.h>
 
 #include "view/iconcodes.h" // IWYU pragma: export
 #include "workspace/workspacetypes.h"
@@ -145,7 +142,6 @@ enum class IconSizeType {
 class ContainerType
 {
     Q_GADGET
-
 public:
     enum Type
     {
@@ -181,3 +177,5 @@ inline const workspace::DataKey WS_UiSettings("ui_settings");
 inline const workspace::DataKey WS_UiStates("ui_states");
 inline const workspace::DataKey WS_UiToolConfigs("ui_toolconfigs");
 }
+
+#endif // MUSE_UI_UITYPES_H

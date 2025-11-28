@@ -20,7 +20,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#ifndef MUSE_UI_MUSICALSYMBOLCODE_H
+#define MUSE_UI_MUSICALSYMBOLCODE_H
 
 #include <QObject>
 
@@ -117,3 +118,5 @@ inline QString musicalSymbolToString(MusicalSymbolCodes::Code symbolCode, bool w
     return noteSymbol;
 }
 }
+
+#endif // MUSE_UI_MUSICALSYMBOLCODE_H

@@ -26,8 +26,6 @@
 #include <QMap>
 #include <QStack>
 
-#include <qqmlintegration.h>
-
 #include "global/async/asyncable.h"
 
 #include "modularity/ioc.h"
@@ -57,9 +55,6 @@ private:
 class InteractiveProvider : public QObject, public IInteractiveProvider, public Injectable, public async::Asyncable
 {
     Q_OBJECT
-
-    QML_NAMED_ELEMENT(CppInteractiveProvider);
-    QML_UNCREATABLE("Must be created in C++ only");
 
     Inject<IUiConfiguration> config = { this };
     Inject<IInteractiveUriRegister> uriRegister = { this };
