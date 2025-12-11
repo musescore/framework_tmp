@@ -54,13 +54,12 @@ void AudioConfiguration::init()
     settings()->setDefaultValue(AUDIO_BUFFER_SIZE_KEY, Val(1024));
     settings()->valueChanged(AUDIO_BUFFER_SIZE_KEY).onReceive(nullptr, [this](const Val&) {
         m_driverBufferSizeChanged.notify();
-        updateSamplesToPreallocate();
     });
 
 #if defined(Q_OS_WIN)
     settings()->setDefaultValue(AUDIO_API_KEY, Val("WASAPI"));
 #elif defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    settings()->setDefaultValue(AUDIO_API_KEY, Val("PipeWire"));
+    settings()->setDefaultValue(AUDIO_API_KEY, Val("ALSA"));
 #endif
     settings()->valueChanged(AUDIO_API_KEY).onReceive(nullptr, [this](const Val&) {
         m_currentAudioApiChanged.notify();
@@ -92,8 +91,6 @@ void AudioConfiguration::init()
     settings()->valueChanged(ONLINE_SOUNDS_PROCESS_IN_BACKGROUND).onReceive(nullptr, [this](const Val& val) {
         m_autoProcessOnlineSoundsInBackgroundChanged.send(val.toBool());
     });
-
-    updateSamplesToPreallocate();
 }
 
 AudioEngineConfig AudioConfiguration::engineConfig() const
@@ -103,9 +100,14 @@ AudioEngineConfig AudioConfiguration::engineConfig() const
     return conf;
 }
 
-void AudioConfiguration::onWorkerConfigChanged()
+void AudioConfiguration::onEngineConfigChanged()
 {
     rpcChannel()->send(rpc::make_notification(rpc::Method::EngineConfigChanged, rpc::RpcPacker::pack(engineConfig())));
+}
+
+std::string AudioConfiguration::defaultAudioApi() const
+{
+    return settings()->defaultValue(AUDIO_API_KEY).toString();
 }
 
 std::string AudioConfiguration::currentAudioApi() const
@@ -158,16 +160,6 @@ async::Notification AudioConfiguration::driverBufferSizeChanged() const
     return m_driverBufferSizeChanged;
 }
 
-samples_t AudioConfiguration::samplesToPreallocate() const
-{
-    return m_samplesToPreallocate;
-}
-
-async::Channel<samples_t> AudioConfiguration::samplesToPreallocateChanged() const
-{
-    return m_samplesToPreallocateChanged;
-}
-
 unsigned int AudioConfiguration::sampleRate() const
 {
     return settings()->value(AUDIO_SAMPLE_RATE_KEY).toInt();
@@ -216,7 +208,7 @@ void AudioConfiguration::setAutoProcessOnlineSoundsInBackground(bool value)
 {
     settings()->setSharedValue(ONLINE_SOUNDS_PROCESS_IN_BACKGROUND, Val(value));
 
-    onWorkerConfigChanged();
+    onEngineConfigChanged();
 }
 
 async::Channel<bool> AudioConfiguration::autoProcessOnlineSoundsInBackgroundChanged() const
@@ -227,16 +219,4 @@ async::Channel<bool> AudioConfiguration::autoProcessOnlineSoundsInBackgroundChan
 bool AudioConfiguration::shouldMeasureInputLag() const
 {
     return settings()->value(AUDIO_MEASURE_INPUT_LAG).toBool();
-}
-
-void AudioConfiguration::updateSamplesToPreallocate()
-{
-    samples_t minToReserve = minSamplesToReserve(RenderMode::RealTimeMode);
-    samples_t driverBufSize = driverBufferSize();
-    samples_t newValue = std::max(minToReserve, driverBufSize);
-
-    if (m_samplesToPreallocate != newValue) {
-        m_samplesToPreallocate = newValue;
-        m_samplesToPreallocateChanged.send(newValue);
-    }
 }

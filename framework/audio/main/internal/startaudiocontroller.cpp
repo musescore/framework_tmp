@@ -164,7 +164,7 @@ async::Channel<bool> StartAudioController::isAudioStartedChanged() const
 void StartAudioController::startAudioProcessing(const IApplication::RunMode& mode)
 {
     IAudioDriver::Spec requiredSpec;
-    requiredSpec.format = IAudioDriver::Format::AudioF32;
+    requiredSpec.deviceId = configuration()->audioOutputDeviceId();
     requiredSpec.output.sampleRate = configuration()->sampleRate();
     requiredSpec.output.audioChannelCount = configuration()->audioChannelsCount();
     requiredSpec.output.samplesPerChannel = configuration()->driverBufferSize();
@@ -172,13 +172,14 @@ void StartAudioController::startAudioProcessing(const IApplication::RunMode& mod
 #ifndef Q_OS_WASM
 
     m_requiredSamplesTotal = requiredSpec.output.samplesPerChannel * requiredSpec.output.audioChannelCount;
-    audioDriver()->activeSpecChanged().onReceive(this, [this](const IAudioDriver::Spec& spec) {
+
+    audioDriverController()->activeSpecChanged().onReceive(this, [this](const IAudioDriver::Spec& spec) {
         m_requiredSamplesTotal = spec.output.samplesPerChannel * spec.output.audioChannelCount;
     });
 
     bool shouldMeasureInputLag = configuration()->shouldMeasureInputLag();
     requiredSpec.callback = [this, shouldMeasureInputLag]
-                            (void* /*userdata*/, uint8_t* stream, int byteCount) {
+                            (uint8_t* stream, int byteCount) {
         std::memset(stream, 0, byteCount);
         // driver metrics
         const size_t driverSamplesTotal = byteCount / sizeof(float);
@@ -207,8 +208,8 @@ void StartAudioController::startAudioProcessing(const IApplication::RunMode& mod
             if (!m_alignmentBuffer || m_alignmentBuffer->capacity() != capacity) {
                 m_alignmentBuffer = std::make_shared<AlignmentBuffer>(capacity);
             }
-            alignbuf = m_alignmentBuffer.get(); // minor optimization and easier debugging
-            static thread_local std::vector<float> proc_buf; // temp buffer
+            alignbuf = m_alignmentBuffer.get();     // minor optimization and easier debugging
+            static thread_local std::vector<float> proc_buf;     // temp buffer
             if (proc_buf.size() != requiredSamplesTotal) {
                 proc_buf.resize(requiredSamplesTotal);
             }
@@ -262,11 +263,7 @@ void StartAudioController::startAudioProcessing(const IApplication::RunMode& mod
 
     IAudioDriver::Spec activeSpec;
     if (mode == IApplication::RunMode::GuiApp) {
-        audioDriver()->init();
-
-        audioDriver()->selectOutputDevice(configuration()->audioOutputDeviceId());
-
-        if (!audioDriver()->open(requiredSpec, &activeSpec)) {
+        if (!audioDriverController()->open(requiredSpec, &activeSpec)) {
             return;
         }
     } else {
@@ -295,9 +292,8 @@ void StartAudioController::stopAudioProcessing()
 {
     m_isAudioStarted.set(false);
 
-    if (audioDriver()->isOpened()) {
-        audioDriver()->close();
-    }
+    audioDriverController()->close();
+
 #ifndef Q_OS_WASM
     // Must call deinit() before stopping worker, so disconnect messages can
     // still be processed on the worker thread
@@ -310,9 +306,4 @@ void StartAudioController::stopAudioProcessing()
         m_worker->stop();
     }
 #endif
-}
-
-IAudioDriverPtr StartAudioController::audioDriver() const
-{
-    return audioDriverController()->audioDriver();
 }

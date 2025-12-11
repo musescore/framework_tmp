@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2021 MuseScore Limited and others
+ * Copyright (C) 2025 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -19,26 +19,26 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#pragma once
+#include "appupdateservicestub.h"
 
-#include "iaudiodriver.h"
+using namespace muse;
+using namespace muse::update;
+using namespace muse::async;
 
-namespace muse::audio {
-class WinmmDriver : public IAudioDriver
+Promise<RetVal<ReleaseInfo> > AppUpdateServiceStub::checkForUpdate()
 {
-public:
-    WinmmDriver() = default;
+    return Promise<RetVal<ReleaseInfo> >([this](auto resolve, auto) {
+        return resolve(make_ret(Ret::Code::NotSupported));
+    });
+}
 
-    std::string name() const override;
-    bool open(const Spec& spec, Spec* activeSpec) override;
-    void close() override;
-    bool isOpened() const override;
+const RetVal<ReleaseInfo>& AppUpdateServiceStub::lastCheckResult() const
+{
+    static const auto dummyInfo = RetVal<ReleaseInfo>::make_ret(Ret::Code::NotSupported);
+    return dummyInfo;
+}
 
-    std::string outputDevice() const override;
-    bool selectOutputDevice(const std::string& name) override;
-    std::vector<std::string> availableOutputDevices() const override;
-    async::Notification availableOutputDevicesChanged() const override;
-    void resume() override;
-    void suspend() override;
-};
+RetVal<Progress> AppUpdateServiceStub::downloadRelease()
+{
+    return RetVal<Progress>::make_ret(Ret::Code::NotSupported);
 }

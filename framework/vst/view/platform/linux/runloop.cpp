@@ -21,7 +21,6 @@
  */
 #include "runloop.h"
 
-#include <QSocketNotifier>
 #include <QTimer>
 
 #include "global/containers.h"
@@ -62,29 +61,19 @@ Steinberg::tresult RunLoop::registerEventHandler(Steinberg::Linux::IEventHandler
     Handler* h = new Handler();
     h->fd = fd;
     h->handler = handler;
-    h->readSN = new QSocketNotifier(fd, QSocketNotifier::Read);
-    h->writeSN = new QSocketNotifier(fd, QSocketNotifier::Write);
-
-    QObject::connect(h->readSN, &QSocketNotifier::activated, [h](QSocketDescriptor, QSocketNotifier::Type) {
-        h->handler->onFDIsSet(h->fd);
-    });
-
-    QObject::connect(h->writeSN, &QSocketNotifier::activated, [h](QSocketDescriptor, QSocketNotifier::Type) {
-        h->handler->onFDIsSet(h->fd);
-    });
 
     m_handlers.push_back(h);
+
+    h->ticker.start(2 /*~30 FPS*/, [h](){
+        h->handler->onFDIsSet(h->fd);
+    }, Ticker::Mode::Repeat);
 
     return Steinberg::kResultTrue;
 }
 
 RunLoop::Handler::~Handler()
 {
-    readSN->disconnect();
-    writeSN->disconnect();
-
-    delete readSN;
-    delete writeSN;
+    ticker.stop();
 }
 
 Steinberg::tresult RunLoop::unregisterEventHandler(Steinberg::Linux::IEventHandler* handler)
@@ -99,7 +88,6 @@ Steinberg::tresult RunLoop::unregisterEventHandler(Steinberg::Linux::IEventHandl
         }
 
         m_handlers.erase(it);
-
         delete h;
     }
 

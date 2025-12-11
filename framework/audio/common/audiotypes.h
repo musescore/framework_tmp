@@ -38,6 +38,8 @@
 
 #include "mpe/events.h"
 
+#include "log.h"
+
 namespace muse::audio {
 using msecs_t = int64_t;
 using secs_t = muse::secs_t;
@@ -79,6 +81,7 @@ static constexpr samples_t MINIMUM_BUFFER_SIZE = 128;
 #endif
 
 static constexpr samples_t MAXIMUM_BUFFER_SIZE = 4096;
+static constexpr samples_t DEFAULT_BUFFER_SIZE = 1024;
 
 struct OutputSpec {
     sample_rate_t sampleRate = 0;
@@ -105,21 +108,47 @@ enum class SoundTrackType {
     WAV
 };
 
+enum class AudioSampleFormat {
+    Undefined = 0,
+    Int16,
+    Int24,
+    Float32
+};
+
 struct SoundTrackFormat {
     SoundTrackType type = SoundTrackType::Undefined;
     OutputSpec outputSpec;
+    AudioSampleFormat sampleFormat = AudioSampleFormat::Undefined;
     int bitRate = 0;
 
     bool operator==(const SoundTrackFormat& other) const
     {
         return type == other.type
                && outputSpec == other.outputSpec
+               && sampleFormat == other.sampleFormat
                && bitRate == other.bitRate;
     }
 
     bool isValid() const
     {
-        return type != SoundTrackType::Undefined && outputSpec.isValid();
+        if (!outputSpec.isValid()) {
+            return false;
+        }
+
+        switch (type) {
+        case SoundTrackType::WAV:
+        case SoundTrackType::FLAC:
+            // For lossless/uncompressed, sample format must be defined
+            return sampleFormat != AudioSampleFormat::Undefined;
+
+        case SoundTrackType::MP3:
+        case SoundTrackType::OGG:
+            // For lossy, bitrate must be positive
+            return bitRate > 0;
+
+        default:
+            return false;
+        }
     }
 };
 
@@ -361,13 +390,11 @@ struct AudioParams {
 };
 
 struct AudioSignalVal {
-    float amplitude = 0.f;
     volume_dbfs_t pressure = 0.f;
 
     inline bool operator ==(const AudioSignalVal& other) const
     {
-        return muse::is_equal(amplitude, other.amplitude)
-               && pressure == other.pressure;
+        return pressure == other.pressure;
     }
 };
 
@@ -376,9 +403,9 @@ using AudioSignalChanges = async::Channel<AudioSignalValuesMap>;
 
 static constexpr volume_dbfs_t MINIMUM_OPERABLE_DBFS_LEVEL = volume_dbfs_t::make(-100.f);
 struct AudioSignalsNotifier {
-    void updateSignalValues(const audioch_t audioChNumber, const float newAmplitude)
+    void updateSignalValues(const audioch_t audioChNumber, const float newPeak)
     {
-        volume_dbfs_t newPressure = (newAmplitude > 0.f) ? volume_dbfs_t(muse::linear_to_db(newAmplitude)) : MINIMUM_OPERABLE_DBFS_LEVEL;
+        volume_dbfs_t newPressure = (newPeak > 0.f) ? volume_dbfs_t(muse::linear_to_db(newPeak)) : MINIMUM_OPERABLE_DBFS_LEVEL;
         newPressure = std::max(newPressure, MINIMUM_OPERABLE_DBFS_LEVEL);
 
         AudioSignalVal& signalVal = m_signalValuesMap[audioChNumber];
@@ -391,9 +418,7 @@ struct AudioSignalsNotifier {
             return;
         }
 
-        signalVal.amplitude = newAmplitude;
         signalVal.pressure = newPressure;
-
         m_needNotifyAboutChanges = true;
     }
 
@@ -405,7 +430,16 @@ struct AudioSignalsNotifier {
         }
     }
 
-    AudioSignalChanges audioSignalChanges;
+    //! NOTE It would be nice if the driver callback was called in one thread.
+    //! But some drivers, for example PipeWire, use queues
+    //! And then the callback can be called in different threads.
+    //! If a score is open, we will change the audio API (change the driver)
+    //! then the number of threads used may increase...
+    //! Channels allow 10 threads by default. Here we're increasing that to the maximum...
+    //! If this is not enough, then we need to make sure that the callback is called in one thread,
+    //! or use something else here instead of channels, some kind of queues.
+    const int _max_threads = 100;
+    AudioSignalChanges audioSignalChanges = AudioSignalChanges(_max_threads);
 
 private:
     static constexpr volume_dbfs_t PRESSURE_MINIMAL_VALUABLE_DIFF = volume_dbfs_t::make(2.5f);

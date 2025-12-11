@@ -21,9 +21,12 @@
  */
 #include "asioaudiodriver.h"
 
+#include "global/async/notification.h"
+
 #undef UNICODE
 #include "ASIOSDK/common/asiosys.h"
 #include "ASIOSDK/common/asio.h"
+#include "ASIOSDK/common/iasiodrv.h"
 #include "ASIOSDK/host/asiodrivers.h"
 
 #include "log.h"
@@ -32,7 +35,9 @@ using namespace muse;
 using namespace muse::audio;
 
 struct AsioData {
+    // Drivers list
     AsioDrivers drivers;
+    std::set<std::string> baddrivers;
 
     // ASIOInit()
     ASIODriverInfo driverInfo;
@@ -64,6 +69,9 @@ struct AsioData {
 
     // ASIOCallbacks
     ASIOCallbacks callbacks;
+
+    // Reset
+    async::Notification resetRequest;
 };
 
 static AsioData s_adata;
@@ -119,7 +127,7 @@ static void s_bufferSwitch(long index, ASIOBool /*processNow*/)
     }
 
     uint8_t* stream = reinterpret_cast<uint8_t*>(&proc_buf[0]);
-    active.callback(nullptr, stream, (int)(procSamplesTotal * sizeof(float)));
+    active.callback(stream, (int)(procSamplesTotal * sizeof(float)));
 
     constexpr float MAX_S16 = 32767.0f;
     constexpr float MAX_S18 = 131071.0f;
@@ -267,28 +275,29 @@ static ASIOTime* s_bufferSwitchTimeInfo(ASIOTime* /*params*/, long index, ASIOBo
     return nullptr;
 }
 
+static void s_resetRequest()
+{
+    s_adata.resetRequest.notify();
+}
+
 static void s_sampleRateChanged(ASIOSampleRate rate)
 {
     LOGI() << "rate: " << rate;
+    s_resetRequest();
 }
 
-static long s_asioMessages(long selector, long value, void* message, double* /*opt*/)
+static long s_asioMessages(long selector, long value, void* /*message*/, double* /*opt*/)
 {
     LOGI() << "selector: " << selector
-           << "value: " << value
-           << "message: " << (const char*)message;
+           << " value: " << value;
 
     long ret = 0;
     switch (selector) {
     case kAsioSelectorSupported:
         if (value == kAsioEngineVersion
-            // || value == kAsioResetRequest
-            // || value == kAsioResyncRequest
-            // || value == kAsioLatenciesChanged
-            // // the following three were added for ASIO 2.0, you don't necessarily have to support them
-            // || value == kAsioSupportsTimeInfo
-            // || value == kAsioSupportsTimeCode
-            // || value == kAsioSupportsInputMonitor
+            || value == kAsioResetRequest
+            || value == kAsioResyncRequest
+            || value == kAsioLatenciesChanged
             ) {
             ret = 1L;
         }
@@ -298,8 +307,12 @@ static long s_asioMessages(long selector, long value, void* message, double* /*o
         // You cannot reset the driver right now, as this code is called from the driver.
         // Reset the driver is done by completely destruct is. I.e. ASIOStop(), ASIODisposeBuffers(), Destruction
         // Afterwards you initialize the driver again.
-        ret = 0L;
+        s_resetRequest();
+        ret = 1L;
         break;
+    case kAsioBufferSizeChange:
+        s_resetRequest();
+        ret = 1L;
     case kAsioResyncRequest:
         // This informs the application, that the driver encountered some non fatal data loss.
         // It is used for synchronization purposes of different media.
@@ -307,13 +320,15 @@ static long s_asioMessages(long selector, long value, void* message, double* /*o
         // Windows Multimedia system, which could loose data because the Mutex was hold too long
         // by another thread.
         // However a driver can issue it in other situations, too.
+        s_resetRequest();
         ret = 1L;
         break;
     case kAsioLatenciesChanged:
         // This will inform the host application that the drivers were latencies changed.
         // Beware, it this does not mean that the buffer sizes have changed!
         // You might need to update internal delay data.
-        ret = 0L;
+        s_resetRequest();
+        ret = 1L;
         break;
     case kAsioEngineVersion:
         // return the supported ASIO version of the host application
@@ -384,22 +399,23 @@ static ASIOError create_asio_buffers(long bufferSize, long outputChannels, long 
     return ASE_OK;
 }
 
-bool AsioAudioDriver::open(const Spec& spec, Spec* activeSpec)
+AudioDeviceID AsioAudioDriver::defaultDevice() const
 {
-    if (m_deviceId.empty()) {
-        AudioDeviceList devices = availableOutputDevices();
-        if (devices.empty()) {
-            return false;
-        }
-        m_deviceId = devices.at(0).id;
+    AudioDeviceList devices = availableOutputDevices();
+    if (devices.empty()) {
+        return AudioDeviceID();
     }
-
-    return doOpen(m_deviceId, spec, activeSpec);
+    return devices.at(0).id;
 }
 
-bool AsioAudioDriver::doOpen(const AudioDeviceID& device, const Spec& spec, Spec* activeSpec)
+bool AsioAudioDriver::open(const Spec& spec, Spec* activeSpec)
 {
-    const char* name = device.c_str();
+    LOGI() << "try open: " << spec.deviceId;
+    IF_ASSERT_FAILED(!spec.deviceId.empty()) {
+        return false;
+    }
+
+    const char* name = spec.deviceId.c_str();
     bool ok = s_adata.drivers.loadDriver(const_cast<char*>(name));
     if (!ok) {
         LOGE() << "failed load driver: " << name;
@@ -414,7 +430,7 @@ bool AsioAudioDriver::doOpen(const AudioDeviceID& device, const Spec& spec, Spec
 
     LOGI() << "asioVersion: " << s_adata.driverInfo.asioVersion
            << " driverVersion: " << s_adata.driverInfo.driverVersion
-           << " name: " << s_adata.driverInfo.name;
+           << " driverName: " << s_adata.driverInfo.name;
 
     // Get device metrics
     AsioData::DeviceMetrics& metrics = s_adata.deviceMetrics;
@@ -489,6 +505,10 @@ bool AsioAudioDriver::doOpen(const AudioDeviceID& device, const Spec& spec, Spec
         return ok;
     }
 
+    s_adata.resetRequest.onNotify(this, [this]() {
+        reset();
+    }, async::Asyncable::Mode::SetReplace);
+
     m_running = true;
     m_thread = std::thread([this]() {
         bool ok = ASIOStart() == ASE_OK;
@@ -517,7 +537,9 @@ bool AsioAudioDriver::doOpen(const AudioDeviceID& device, const Spec& spec, Spec
 void AsioAudioDriver::close()
 {
     m_running = false;
-    m_thread.join();
+    if (m_thread.joinable()) {
+        m_thread.join();
+    }
 
     ASIODisposeBuffers();
 
@@ -530,6 +552,18 @@ void AsioAudioDriver::close()
     // ASIOExit();
 
     s_adata.drivers.removeCurrentDriver();
+}
+
+void AsioAudioDriver::reset()
+{
+    LOGI() << "! driver reset called";
+    if (!isOpened()) {
+        return;
+    }
+
+    Spec spec = s_adata.activeSpec;
+    close();
+    open(spec, nullptr);
 }
 
 bool AsioAudioDriver::isOpened() const
@@ -547,53 +581,7 @@ async::Channel<AsioAudioDriver::Spec> AsioAudioDriver::activeSpecChanged() const
     return m_activeSpecChanged;
 }
 
-bool AsioAudioDriver::setOutputDeviceBufferSize(unsigned int bufferSize)
-{
-    bool result = true;
-
-    if (isOpened()) {
-        close();
-        Spec spec = s_adata.activeSpec;
-        spec.output.samplesPerChannel = bufferSize;
-        result = open(spec, nullptr);
-    }
-
-    if (result) {
-        m_outputDeviceBufferSizeChanged.notify();
-    }
-
-    return result;
-}
-
-async::Notification AsioAudioDriver::outputDeviceBufferSizeChanged() const
-{
-    return m_outputDeviceBufferSizeChanged;
-}
-
-bool AsioAudioDriver::setOutputDeviceSampleRate(unsigned int sampleRate)
-{
-    bool result = true;
-
-    if (isOpened()) {
-        close();
-        Spec spec = s_adata.activeSpec;
-        spec.output.sampleRate = sampleRate;
-        result = open(spec, nullptr);
-    }
-
-    if (result) {
-        m_outputDeviceSampleRateChanged.notify();
-    }
-
-    return result;
-}
-
-async::Notification AsioAudioDriver::outputDeviceSampleRateChanged() const
-{
-    return m_outputDeviceSampleRateChanged;
-}
-
-std::vector<unsigned int> AsioAudioDriver::availableOutputDeviceBufferSizes() const
+std::vector<samples_t> AsioAudioDriver::availableOutputDeviceBufferSizes() const
 {
     if (!isOpened()) {
         return {
@@ -605,20 +593,20 @@ std::vector<unsigned int> AsioAudioDriver::availableOutputDeviceBufferSizes() co
         };
     }
 
-    std::vector<unsigned int> result;
+    std::vector<samples_t> result;
 
     samples_t n = s_adata.deviceMetrics.maxSize;
     samples_t min = s_adata.deviceMetrics.minSize;
 
     while (n >= min) {
-        result.push_back(static_cast<unsigned int>(n));
+        result.push_back(n);
         n /= 2;
     }
 
     return result;
 }
 
-std::vector<unsigned int> AsioAudioDriver::availableOutputDeviceSampleRates() const
+std::vector<sample_rate_t> AsioAudioDriver::availableOutputDeviceSampleRates() const
 {
     return {
         44100,
@@ -626,46 +614,38 @@ std::vector<unsigned int> AsioAudioDriver::availableOutputDeviceSampleRates() co
     };
 }
 
-AudioDeviceID AsioAudioDriver::outputDevice() const
+static bool isDriverAvailable(long index, const char* name)
 {
-    return m_deviceId;
-}
-
-bool AsioAudioDriver::selectOutputDevice(const AudioDeviceID& id)
-{
-    bool result = true;
-
-    if (m_deviceId == id) {
-        return result;
+    //! NOTE We remember drivers that are not loaded or initialized
+    //! until the end of the application's operation.
+    //! Because there are drivers that cannot be reloaded after closing
+    //! (to implement checking every time)
+    //! For example: Audient USB Audio ASIO Driver
+    //! When we reopen it, it crashes.
+    if (s_adata.baddrivers.find(std::string(name)) != s_adata.baddrivers.end()) {
+        return false;
     }
 
-    m_deviceId = id;
-
-    if (isOpened()) {
-        close();
-        Spec spec = s_adata.activeSpec;
-
-        //! NOTE We are trying to open a new device with the default value;
-        //! it is not known what it was before.
-        spec.output.samplesPerChannel = 1024;
-        result = open(spec, nullptr);
+    IASIO* driver = 0;
+    LONG ret = s_adata.drivers.asioOpenDriver(index, (void**)&driver);
+    if (ret == DRVERR_DEVICE_ALREADY_OPEN) {
+        return true;
     }
 
-    if (result) {
-        m_outputDeviceChanged.notify();
+    if (ret != 0) {
+        s_adata.baddrivers.insert(std::string(name));
+        return false;
     }
 
-    return result;
-}
+    void* sysRef = nullptr;
+    bool ok = driver->init(sysRef) == ASIOTrue;
+    if (!ok) {
+        s_adata.baddrivers.insert(std::string(name));
+    }
 
-bool AsioAudioDriver::resetToDefaultOutputDevice()
-{
-    return selectOutputDevice(AudioDeviceID());
-}
+    s_adata.drivers.asioCloseDriver(index);
 
-async::Notification AsioAudioDriver::outputDeviceChanged() const
-{
-    return m_outputDeviceChanged;
+    return ok;
 }
 
 AudioDeviceList AsioAudioDriver::availableOutputDevices() const
@@ -682,10 +662,12 @@ AudioDeviceList AsioAudioDriver::availableOutputDevices() const
     AudioDeviceList devices;
     devices.reserve(count);
     for (long i = 0; i < count; i++) {
-        AudioDevice d;
-        d.id = names[i];
-        d.name = d.id;
-        devices.push_back(std::move(d));
+        if (isDriverAvailable(i, names[i])) {
+            AudioDevice d;
+            d.id = names[i];
+            d.name = d.id;
+            devices.push_back(std::move(d));
+        }
     }
 
     return devices;
@@ -694,12 +676,4 @@ AudioDeviceList AsioAudioDriver::availableOutputDevices() const
 async::Notification AsioAudioDriver::availableOutputDevicesChanged() const
 {
     return m_availableOutputDevicesChanged;
-}
-
-void AsioAudioDriver::resume()
-{
-}
-
-void AsioAudioDriver::suspend()
-{
 }

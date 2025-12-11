@@ -69,24 +69,16 @@ void AccessibilityModule::registerApi()
 
     auto api = ioc()->resolve<IApiRegister>(moduleName());
     if (api) {
-        api->regApiCreator(moduleName(), "api.accessibility", new ApiCreator<api::AccessibilityApi>());
+        api->regApiCreator(moduleName(), "MuseInternal.Accessibility", new ApiCreator<api::AccessibilityApi>());
     }
 }
 
-void AccessibilityModule::onPreInit(const IApplication::RunMode& mode)
+void AccessibilityModule::onPreInit(const IApplication::RunMode&)
 {
-    if (mode != IApplication::RunMode::GuiApp) {
-        return;
-    }
-
     m_controller->setAccesibilityEnabled(true);
 }
 
-void AccessibilityModule::onInit(const IApplication::RunMode& mode)
+void AccessibilityModule::onInit(const IApplication::RunMode&)
 {
-    if (mode != IApplication::RunMode::GuiApp) {
-        return;
-    }
-
     m_configuration->init();
 }

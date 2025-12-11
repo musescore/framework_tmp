@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2021 MuseScore Limited and others
+ * Copyright (C) 2025 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -19,22 +19,26 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef MUSE_UPDATE_UPDATESERVICESTUB_H
-#define MUSE_UPDATE_UPDATESERVICESTUB_H
+#include "tableviewlistcell.h"
 
-#include "update/iappupdateservice.h"
+using namespace muse::uicomponents;
 
-namespace muse::update {
-class UpdateServiceStub : public IAppUpdateService
+TableViewListCell::TableViewListCell(QObject* parent)
+    : TableViewCell(parent)
 {
-public:
-    RetVal<ReleaseInfo> checkForUpdate() override;
-    RetVal<ReleaseInfo> lastCheckResult() const override;
-
-    RetVal<io::path_t> downloadRelease() override;
-    void cancelUpdate() override;
-    Progress updateProgress() override;
-};
 }
 
-#endif // MUSE_UPDATE_UPDATESERVICESTUB_H
+QString TableViewListCell::current() const
+{
+    return m_current;
+}
+
+void TableViewListCell::setCurrent(const QString& current)
+{
+    if (m_current == current) {
+        return;
+    }
+
+    m_current = current;
+    emit currentChanged();
+}

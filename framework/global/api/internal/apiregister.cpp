@@ -25,8 +25,6 @@
 #include <QMetaObject>
 #include <QMetaMethod>
 
-#include "global/stringutils.h"
-
 #include "log.h"
 
 using namespace muse::api;
@@ -41,12 +39,21 @@ struct SingletonApiCreator : public IApiRegister::ICreator
     bool isNeedDelete() const override { return false; }
 };
 
+ApiRegister::~ApiRegister()
+{
+    for (auto& e : m_apiengines) {
+        delete e.apiengine;
+    }
+}
+
 void ApiRegister::regApiCreator(const std::string& module, const std::string& api, ICreator* c)
 {
     ApiCreator ac;
-    auto it = m_creators.find(api);
-    if (it != m_creators.end()) {
-        ac = it->second;
+    {
+        auto it = m_creators.find(api);
+        if (it != m_creators.end()) {
+            ac = it->second;
+        }
     }
 
     IF_ASSERT_FAILED(!ac.c) {
@@ -57,6 +64,55 @@ void ApiRegister::regApiCreator(const std::string& module, const std::string& ap
     ac.module = module;
     ac.c = c;
     m_creators[api] = ac;
+
+    // register for Qml
+    std::string name;
+    {
+        auto pos = api.find('.');
+        if (pos != std::string::npos) {
+            name = api.substr(pos + 1);
+        }
+    }
+
+    IF_ASSERT_FAILED(!name.empty()) {
+        return;
+    }
+
+    qmlRegisterSingletonType(api.c_str(), 1, 0, name.c_str(), [this, api](QQmlEngine*, QJSEngine* jsengine) -> QJSValue {
+        auto obj = createApi(api, makeApiEngine(jsengine));
+        bool isNeedDelete = obj.second;
+        QJSEngine::setObjectOwnership(obj.first, isNeedDelete ? QJSEngine::JavaScriptOwnership : QJSEngine::CppOwnership);
+        return jsengine->newQObject(obj.first);
+    });
+}
+
+JsApiEngine* ApiRegister::makeApiEngine(QJSEngine* jsengine)
+{
+    auto it = std::find_if(m_apiengines.begin(), m_apiengines.end(), [jsengine](const ApiEngine& e) {
+        return e.jsengine == jsengine;
+    });
+
+    if (it != m_apiengines.end()) {
+        return it->apiengine;
+    }
+
+    ApiEngine e;
+    e.jsengine = jsengine;
+    e.apiengine = new JsApiEngine(jsengine, muse::modularity::globalCtx());
+    m_apiengines.push_back(e);
+
+    QObject::connect(jsengine, &QJSEngine::destroyed, [this, jsengine]() {
+        auto it = std::find_if(m_apiengines.begin(), m_apiengines.end(), [jsengine](const ApiEngine& e) {
+            return e.jsengine == jsengine;
+        });
+
+        if (it != m_apiengines.end()) {
+            delete it->apiengine;
+            m_apiengines.erase(it);
+        }
+    });
+
+    return e.apiengine;
 }
 
 void ApiRegister::regApiSingltone(const std::string& module, const std::string& api, ApiObject* o)
@@ -74,10 +130,32 @@ std::pair<ApiObject*, bool /*is need delete*/> ApiRegister::createApi(const std:
     return { it->second.c->create(e), it->second.c->isNeedDelete() };
 }
 
-void ApiRegister::regGlobalEnum(const std::string& module, const QMetaEnum& meta, const std::string& name)
+void ApiRegister::regEnum(const char* uri, const char* name, const QMetaEnum& meta, EnumType type)
+{
+    qmlRegisterSingletonType(uri, 1, 0, name, [meta, type](QQmlEngine*, QJSEngine* jsengine) -> QJSValue {
+        QJSValue enumObj = jsengine->newObject();
+
+        for (int i = 0; i < meta.keyCount(); ++i) {
+            QString key = QString::fromLatin1(meta.key(i));
+            if (type == EnumType::String) {
+                enumObj.setProperty(key, key);
+            } else {
+                int val = meta.value(i);
+                enumObj.setProperty(key, val);
+            }
+        }
+
+        QJSValue freezeFn = jsengine->evaluate("Object.freeze");
+        return freezeFn.call({ enumObj });
+    });
+}
+
+void ApiRegister::regGlobalEnum(const std::string& module, const QMetaEnum& meta,
+                                EnumType type,
+                                const std::string& name)
 {
     std::string ename = name.empty() ? std::string(meta.enumName()) : name;
-    m_globalEnums.push_back({ module, ename, meta });
+    m_globalEnums.push_back({ module, ename, meta, type });
 }
 
 const std::vector<ApiRegister::GlobalEnum>& ApiRegister::globalEnums() const
@@ -97,6 +175,11 @@ public:
         return ctx;
     }
 
+    int apiversion() const override
+    {
+        return 2;
+    }
+
     QJSValue newQObject(QObject* o) override
     {
         return engine.newQObject(o);
@@ -110,6 +193,12 @@ public:
     QJSValue newArray(size_t length) override
     {
         return engine.newArray(static_cast<uint>(length));
+    }
+
+    QJSValue freeze(const QJSValue& val) override
+    {
+        static QJSValue freezeFn = engine.evaluate("Object.freeze");
+        return freezeFn.call({ val });
     }
 };
 
@@ -154,7 +243,7 @@ ApiRegister::Dump ApiRegister::dump() const
 
     for (const auto& p : m_creators) {
         Dump::Api api;
-        api.prefix = QString::fromStdString(p.first); // api, like api.dispatcher
+        api.prefix = QString::fromStdString(p.first); // like MuseInternal.Dispatcher
 
         ApiObject* obj = p.second.c->create(&engine);
         const QMetaObject* meta = obj->metaObject();

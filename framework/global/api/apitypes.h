@@ -19,30 +19,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "updatescenariostub.h"
 
-using namespace muse::update;
+#pragma once
 
-bool UpdateScenarioStub::needCheckForUpdate() const
-{
-    return false;
-}
-
-muse::async::Promise<muse::Ret> UpdateScenarioStub::checkForUpdate(bool)
-{
-    return muse::async::Promise<muse::Ret>([](auto /*resolve*/, auto reject) {
-        return reject(int(muse::Ret::Code::UnknownError), "stub");
-    });
-}
-
-bool UpdateScenarioStub::hasUpdate() const
-{
-    return false;
-}
-
-muse::async::Promise<muse::Ret> UpdateScenarioStub::showUpdate()
-{
-    return muse::async::Promise<muse::Ret>([](auto /*resolve*/, auto reject) {
-        return reject(int(muse::Ret::Code::UnknownError), "stub");
-    });
+namespace muse::api {
+enum class EnumType {
+    Undefined = 0,
+    String,
+    Int
+};
 }

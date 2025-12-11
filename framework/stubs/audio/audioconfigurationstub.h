@@ -29,6 +29,7 @@ class AudioConfigurationStub : public IAudioConfiguration
 public:
     AudioEngineConfig engineConfig() const override;
 
+    std::string defaultAudioApi() const override;
     std::string currentAudioApi() const override;
     void setCurrentAudioApi(const std::string& name) override;
     async::Notification currentAudioApiChanged() const override;
@@ -42,9 +43,6 @@ public:
     unsigned int driverBufferSize() const override; // samples
     void setDriverBufferSize(unsigned int size) override;
     async::Notification driverBufferSizeChanged() const override;
-
-    samples_t samplesToPreallocate() const override;
-    async::Channel<samples_t> samplesToPreallocateChanged() const override;
 
     unsigned int sampleRate() const override;
     void setSampleRate(unsigned int sampleRate) override;

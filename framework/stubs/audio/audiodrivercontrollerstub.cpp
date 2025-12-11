@@ -22,34 +22,104 @@
 
 #include "audiodrivercontrollerstub.h"
 
-#include "audiodriverstub.h"
-
+using namespace muse;
 using namespace muse::audio;
+
+// Api
+std::vector<std::string> AudioDriverControllerStub::availableAudioApiList() const
+{
+    return {};
+}
 
 std::string AudioDriverControllerStub::currentAudioApi() const
 {
     return {};
 }
 
-void AudioDriverControllerStub::setCurrentAudioApi(const std::string&)
+void AudioDriverControllerStub::changeCurrentAudioApi(const std::string&)
 {
 }
 
-muse::async::Notification AudioDriverControllerStub::currentAudioApiChanged() const
+async::Notification AudioDriverControllerStub::currentAudioApiChanged() const
+{
+    return async::Notification();
+}
+
+// Current driver operation
+AudioDeviceList AudioDriverControllerStub::availableOutputDevices() const
 {
     return {};
 }
 
-std::vector<std::string> AudioDriverControllerStub::availableAudioApiList() const
+async::Notification AudioDriverControllerStub::availableOutputDevicesChanged() const
+{
+    return async::Notification();
+}
+
+bool AudioDriverControllerStub::open(const IAudioDriver::Spec&, IAudioDriver::Spec*)
+{
+    return false;
+}
+
+void AudioDriverControllerStub::close()
+{
+}
+
+bool AudioDriverControllerStub::isOpened() const
+{
+    return false;
+}
+
+const IAudioDriver::Spec& AudioDriverControllerStub::activeSpec() const
+{
+    static IAudioDriver::Spec spec;
+    return spec;
+}
+
+async::Channel<IAudioDriver::Spec> AudioDriverControllerStub::activeSpecChanged() const
+{
+    return async::Channel<IAudioDriver::Spec>();
+}
+
+AudioDeviceID AudioDriverControllerStub::outputDevice() const
 {
     return {};
 }
 
-IAudioDriverPtr AudioDriverControllerStub::audioDriver() const
+bool AudioDriverControllerStub::selectOutputDevice(const AudioDeviceID&)
 {
-    if (!m_audioDriver) {
-        m_audioDriver = std::make_shared<AudioDriverStub>();
-    }
+    return false;
+}
 
-    return m_audioDriver;
+async::Notification AudioDriverControllerStub::outputDeviceChanged() const
+{
+    return async::Notification();
+}
+
+std::vector<samples_t> AudioDriverControllerStub::availableOutputDeviceBufferSizes() const
+{
+    return {};
+}
+
+void AudioDriverControllerStub::changeBufferSize(samples_t)
+{
+}
+
+async::Notification AudioDriverControllerStub::outputDeviceBufferSizeChanged() const
+{
+    return async::Notification();
+}
+
+std::vector<sample_rate_t> AudioDriverControllerStub::availableOutputDeviceSampleRates() const
+{
+    return {};
+}
+
+void AudioDriverControllerStub::changeSampleRate(sample_rate_t)
+{
+}
+
+async::Notification AudioDriverControllerStub::outputDeviceSampleRateChanged() const
+{
+    return async::Notification();
 }

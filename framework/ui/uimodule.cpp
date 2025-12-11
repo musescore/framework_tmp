@@ -124,20 +124,16 @@ void UiModule::registerApi()
 
     auto api = ioc()->resolve<IApiRegister>(moduleName());
     if (api) {
-        api->regApiCreator(moduleName(), "api.navigation", new ApiCreator<muse::api::NavigationApi>());
-        api->regApiCreator(moduleName(), "api.keyboard", new ApiCreator<muse::api::KeyboardApi>());
-        api->regApiSingltone(moduleName(), "api.theme", m_uiengine->theme());
+        api->regApiCreator(moduleName(), "MuseInternal.Navigation", new ApiCreator<muse::api::NavigationApi>());
+        api->regApiCreator(moduleName(), "MuseInternal.Keyboard", new ApiCreator<muse::api::KeyboardApi>());
+        api->regApiSingltone(moduleName(), "MuseApi.Theme", m_uiengine->theme());
 
         qmlRegisterUncreatableType<IconCode>("MuseApi.Controls", 1, 0, "IconCode", "Cannot create an IconCode");
     }
 }
 
-void UiModule::onPreInit(const IApplication::RunMode& mode)
+void UiModule::onPreInit(const IApplication::RunMode&)
 {
-    if (mode == IApplication::RunMode::AudioPluginRegistration) {
-        return;
-    }
-
     m_configuration->init();
 }
 

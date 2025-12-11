@@ -29,9 +29,14 @@ AudioEngineConfig AudioConfigurationStub::engineConfig() const
     return {};
 }
 
+std::string AudioConfigurationStub::defaultAudioApi() const
+{
+    return {};
+}
+
 std::string AudioConfigurationStub::currentAudioApi() const
 {
-    return std::string();
+    return {};
 }
 
 void AudioConfigurationStub::setCurrentAudioApi(const std::string&)
@@ -74,16 +79,6 @@ void AudioConfigurationStub::setDriverBufferSize(unsigned int)
 async::Notification AudioConfigurationStub::driverBufferSizeChanged() const
 {
     return async::Notification();
-}
-
-samples_t AudioConfigurationStub::samplesToPreallocate() const
-{
-    return 0;
-}
-
-async::Channel<samples_t> AudioConfigurationStub::samplesToPreallocateChanged() const
-{
-    return async::Channel<samples_t>();
 }
 
 unsigned int AudioConfigurationStub::sampleRate() const

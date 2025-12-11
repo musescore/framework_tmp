@@ -19,34 +19,35 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
 #pragma once
 
-#include "global/async/asyncable.h"
+#include <qqmlintegration.h>
 
-#include "global/modularity/ioc.h"
-#include "audio/main/iaudioconfiguration.h"
-#include "audio/iaudiodrivercontroller.h"
-#include "audio/common/rpc/irpcchannel.h"
+#include "abstracttableviewmodel.h"
 
-namespace muse::audio {
-class AudioOutputDeviceController : public Injectable, public async::Asyncable
+namespace muse::uicomponents {
+namespace TestTableViewCellType {
+Q_NAMESPACE;
+QML_ELEMENT;
+
+enum class Type {
+    Custom = static_cast<int>(TableViewCellType::Type::UserType) + 1,
+};
+
+Q_ENUM_NS(Type)
+}
+
+class TestTableViewModel : public AbstractTableViewModel
 {
-    Inject<IAudioConfiguration> configuration = { this };
-    Inject<IAudioDriverController> audioDriverController = { this };
-    Inject<rpc::IRpcChannel> rpcChannel = { this };
+    Q_OBJECT
+    QML_ELEMENT;
 
 public:
+    explicit TestTableViewModel(QObject* parent = nullptr);
 
-    AudioOutputDeviceController(const modularity::ContextPtr& iocCtx)
-        : Injectable(iocCtx) {}
-
-    void init();
+    void load();
 
 private:
-    void changeOutputDevice();
-    void onOutputDeviceChanged();
-
-    IAudioDriverPtr audioDriver() const;
+    MenuItemList makeAvailableFormats();
 };
 }
