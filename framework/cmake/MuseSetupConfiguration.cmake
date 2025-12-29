@@ -1,8 +1,15 @@
 
+# hard dependencies
+if (NOT MUSE_MODULE_AUDIO)
+    set(MUSE_MODULE_MUSESAMPLER OFF)
+    set(MUSE_MODULE_VST OFF)
+endif()
+
 macro(disable_module_deps name)
     if (NOT MUSE_MODULE_${name})
-        set(MUSE_MODULE_${name}_TESTS OFF)
         set(MUSE_MODULE_${name}_API OFF)
+        set(MUSE_MODULE_${name}_QML OFF)
+        set(MUSE_MODULE_${name}_TESTS OFF)
     endif()
 endmacro()
 
@@ -22,18 +29,14 @@ if (NOT MUSE_ENABLE_UNIT_TESTS)
     endforeach()
 endif()
 
-# hard dependency
-if (NOT MUSE_MODULE_AUDIO)
-    set(MUSE_MODULE_MUSESAMPLER OFF)
-    set(MUSE_MODULE_VST OFF)
-endif()
-
 if (NOT MUSE_MODULE_DIAGNOSTICS)
     set(MUSE_MODULE_DIAGNOSTICS_CRASHPAD_CLIENT OFF)
 endif()
 
-if (QT_SUPPORT)
+if (MUSE_QT_SUPPORT)
     add_compile_definitions(KORS_LOGGER_QT_SUPPORT)
+else()
+    add_compile_definitions(NO_QT_SUPPORT)
 endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/MuseFetchDependencies.cmake)
