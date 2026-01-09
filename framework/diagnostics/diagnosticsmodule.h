@@ -19,8 +19,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef MUSE_DIAGNOSTICS_DIAGNOSTICSMODULE_H
-#define MUSE_DIAGNOSTICS_DIAGNOSTICSMODULE_H
+
+#pragma once
 
 #include <memory>
 
@@ -34,14 +34,12 @@ class DiagnosticsConfiguration;
 class DiagnosticsActionsController;
 class DiagnosticsModule : public muse::modularity::IModuleSetup
 {
-    INJECT(muse::io::IFileSystem, fileSystem)
+    muse::GlobalInject<muse::io::IFileSystem> fileSystem;
 
 public:
     std::string moduleName() const override;
     void registerExports() override;
     void resolveImports() override;
-    void registerResources() override;
-    void registerUiTypes() override;
     void onInit(const muse::IApplication::RunMode& mode) override;
 
 private:
@@ -49,5 +47,3 @@ private:
     std::shared_ptr<DiagnosticsActionsController> m_actionsController;
 };
 }
-
-#endif // MUSE_DIAGNOSTICS_DIAGNOSTICSMODULE_H
