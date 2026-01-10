@@ -67,6 +67,10 @@ public:
             return;
         }
 
+        if (m_thread.joinable()) {
+            m_thread.join();
+        }
+
         m_active = true;
         m_started = std::chrono::steady_clock::now();
         m_thread = std::thread([this]() { timerLoop(); });
