@@ -28,6 +28,8 @@
 #include "thirdparty/KDDockWidgets/src/private/DockRegistry_p.h"
 #include "thirdparty/KDDockWidgets/src/Config.h"
 
+#include "global/async/async.h"
+
 #include "dockcentralview.h"
 #include "dockpageview.h"
 #include "dockpanelview.h"
@@ -36,7 +38,8 @@
 #include "dockingholderview.h"
 #include "dockwindow.h"
 
-#include "async/async.h"
+#include "muse_framework_config.h"
+
 #include "log.h"
 
 using namespace muse::dock;
@@ -67,6 +70,10 @@ static KDDockWidgets::Location locationToKLocation(Location location)
 static void clearRegistry()
 {
     TRACEFUNC;
+
+#ifdef MUSE_MULTICONTEXT_WIP
+    return;
+#endif
 
     auto registry = KDDockWidgets::DockRegistry::self();
 
@@ -126,7 +133,14 @@ void DockWindow::componentComplete()
 
     QQuickItem::componentComplete();
 
-    m_mainWindow = new KDDockWidgets::MainWindowQuick("mainWindow",
+    QString name = "mainWindow";
+#ifdef MUSE_MULTICONTEXT_WIP
+    if (iocContext()) {
+        name += "_" + QString::number(iocContext()->id);
+    }
+#endif
+
+    m_mainWindow = new KDDockWidgets::MainWindowQuick(name,
                                                       KDDockWidgets::MainWindowOption_None,
                                                       this);
 
@@ -196,7 +210,6 @@ QQuickWindow* DockWindow::windowProperty() const
 void DockWindow::init()
 {
     clearRegistry();
-
     restoreGeometry();
 
     dockWindowProvider()->init(this);

@@ -19,20 +19,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "multiinstancesstubmodule.h"
+#include "multiwindowsstubmodule.h"
 
 #include "modularity/ioc.h"
-#include "multiinstancesstubprovider.h"
+#include "multiwindowsstubprovider.h"
 
 using namespace muse::mi;
 using namespace muse::modularity;
 
 std::string MultiInstancesModule::moduleName() const
 {
-    return "multiinstances_stub";
+    return "multiwindows_stub";
 }
 
 void MultiInstancesModule::registerExports()
 {
-    ioc()->registerExport<IMultiInstancesProvider>(moduleName(), new MultiInstancesStubProvider());
+    ioc()->registerExport<IMultiWindowsProvider>(moduleName(), new MultiWindowsStubProvider());
 }

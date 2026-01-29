@@ -56,10 +56,12 @@ public:
     void onAllInited(const IApplication::RunMode& mode) override;
     void onDeinit() override;
 
+    // Context
+    modularity::IContextSetup* newContext(const muse::modularity::ContextPtr& ctx) const override;
+
 private:
     std::shared_ptr<UiEngine> m_uiengine;
     std::shared_ptr<UiConfiguration> m_configuration;
-    std::shared_ptr<UiActionsRegister> m_uiactionsRegister;
     std::shared_ptr<NavigationController> m_keyNavigationController;
     std::shared_ptr<NavigationUiActions> m_keyNavigationUiActions;
     std::shared_ptr<WindowsController> m_windowsController;
@@ -73,5 +75,22 @@ private:
     #else
     std::shared_ptr<StubPlatformTheme> m_platformTheme;
     #endif
+
+    // MUSE_MULTICONTEXT_WIP
+    std::shared_ptr<UiActionsRegister> m_uiactionsRegister;
+};
+
+class UiModuleContext : public modularity::IContextSetup
+{
+public:
+
+    UiModuleContext(const modularity::ContextPtr& ctx)
+        : modularity::IContextSetup(ctx) {}
+
+    void registerExports() override;
+    void onAllInited(const IApplication::RunMode& mode) override;
+
+private:
+    std::shared_ptr<UiActionsRegister> m_uiactionsRegister;
 };
 }

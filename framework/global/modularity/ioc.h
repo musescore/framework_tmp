@@ -31,12 +31,13 @@ class QQmlContext;
 
 namespace muse::modularity {
 using kors::modularity::ModulesIoC;
+using kors::modularity::IoCID;
 using kors::modularity::Context;
 using kors::modularity::ContextPtr;
 
 using kors::modularity::Creator;
 
-inline ModulesIoC* _ioc(const ContextPtr& ctx = nullptr)
+inline ModulesIoC* ioc(const ContextPtr& ctx = nullptr)
 {
     return kors::modularity::ioc(ctx);
 }
@@ -64,14 +65,15 @@ inline void removeIoC(const ContextPtr& ctx = nullptr)
 }
 
 namespace muse {
-using kors::modularity::Inject;
 using kors::modularity::GlobalInject;
-using kors::modularity::ThreadSafeInject;
 using kors::modularity::GlobalThreadSafeInject;
+using kors::modularity::ContextInject;
+using kors::modularity::ContextThreadSafeInject;
+using kors::modularity::Contextable;
 
-#define INJECT(Interface, getter) muse::Inject<Interface> getter;
-#define INJECT_STATIC(Interface, getter) static inline muse::Inject<Interface> getter;
-
+//! NOTE Temporary for compatibility
+using kors::modularity::Inject;
+using kors::modularity::ThreadSafeInject;
 using kors::modularity::Injectable;
 
 #ifndef NO_QT_SUPPORT

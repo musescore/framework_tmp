@@ -37,6 +37,8 @@
 #include "modularity/ioc.h"
 #include "ui/iuiengine.h"
 
+#include "muse_framework_config.h"
+
 namespace muse::dock {
 class DockWidgetFactory : public KDDockWidgets::DefaultWidgetFactory
 {
@@ -97,16 +99,21 @@ private:
 using namespace muse::dock;
 using namespace muse::modularity;
 
+static const std::string module_name = "dockwindow";
+
 std::string DockModule::moduleName() const
 {
-    return "dockwindow";
+    return module_name;
 }
 
 void DockModule::registerExports()
 {
     m_actionsController = std::make_shared<DockWindowActionsController>(iocContext());
 
-    ioc()->registerExport<IDockWindowProvider>(moduleName(), new DockWindowProvider());
+#ifdef MUSE_MULTICONTEXT_WIP
+    // For the transition period
+    ioc()->registerExport<IDockWindowProvider>(module_name, new DockWindowProvider());
+#endif
 }
 
 void DockModule::onInit(const IApplication::RunMode&)
@@ -139,4 +146,16 @@ void DockModule::onInit(const IApplication::RunMode&)
 
     KDDockWidgets::Config::self().setAbsoluteWidgetMinSize(QSize(10, 10));
     KDDockWidgets::Config::self().setSeparatorThickness(1);
+}
+
+// Context
+
+IContextSetup* DockModule::newContext(const muse::modularity::ContextPtr& ctx) const
+{
+    return new DockContext(ctx);
+}
+
+void DockContext::registerExports()
+{
+    ioc()->registerExport<IDockWindowProvider>(module_name, new DockWindowProvider());
 }

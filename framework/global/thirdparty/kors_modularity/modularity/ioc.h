@@ -31,7 +31,6 @@ SOFTWARE.
 
 #include "context.h"
 #include "modulesioc.h"
-#include "injectable.h"
 #include "conf.h"
 
 namespace kors::modularity {
@@ -39,27 +38,12 @@ ModulesIoC* globalIoc();
 ModulesIoC* ioc(const ContextPtr& ctx);
 void removeIoC(const ContextPtr& ctx = nullptr);
 
+//! NOTE Internal base class
 template<class I>
-class Inject
+class InjectBase
 {
 public:
-    virtual ~Inject() = default;
-
-#ifdef MUSE_MODULE_GLOBAL_MULTI_IOC
-    Inject(const ContextPtr& ctx)
-#else
-    Inject(const ContextPtr& ctx = nullptr)
-#endif
-        : m_ctx(ctx)
-    {
-        static_assert(!I::modularity_isGlobalInterface(), "The interface must not be global.");
-    }
-
-    Inject(const Injectable* inj)
-        : m_inj(inj)
-    {
-        static_assert(!I::modularity_isGlobalInterface(), "The interface must not be global.");
-    }
+    virtual ~InjectBase() = default;
 
     const ContextPtr& iocContext() const
     {
@@ -101,8 +85,13 @@ public:
     }
 
 protected:
-    Inject(const ContextPtr& ctx, bool /*internal*/)
+    InjectBase(const ContextPtr& ctx)
         : m_ctx(ctx)
+    {
+    }
+
+    InjectBase(const Injectable* inj)
+        : m_inj(inj)
     {
     }
 
@@ -112,41 +101,29 @@ protected:
 };
 
 template<class I>
-class GlobalInject : public Inject<I>
+class ThreadSafeInjectBase : public InjectBase<I>
 {
 public:
-    GlobalInject()
-        : Inject<I>(nullptr, true)
-    {
-        static_assert(I::modularity_isGlobalInterface(), "The interface must be global.");
-    }
-};
-
-/// Thread-safe (locking) variant of Inject.
-template<class I>
-class ThreadSafeInject : public Inject<I>
-{
-public:
-    using Inject<I>::Inject;
+    using InjectBase<I>::InjectBase;
 
     const std::shared_ptr<I>& get() const
     {
         {
             std::shared_lock lock(m_mutex);
-            if (Inject<I>::m_i) {
-                return Inject<I>::m_i;
+            if (InjectBase<I>::m_i) {
+                return InjectBase<I>::m_i;
             }
         }
 
         std::unique_lock lock(m_mutex);
-        return Inject<I>::get();
+        return InjectBase<I>::get();
     }
 
     /// For testing purposes.
     void set(std::shared_ptr<I> impl)
     {
         std::unique_lock lock(m_mutex);
-        Inject<I>::set(impl);
+        InjectBase<I>::set(impl);
     }
 
     const std::shared_ptr<I>& operator()() const
@@ -158,14 +135,72 @@ private:
     mutable std::shared_mutex m_mutex;
 };
 
+//! NOTE Global Inject
 template<class I>
-class GlobalThreadSafeInject : public ThreadSafeInject<I>
+class GlobalInject : public InjectBase<I>
 {
 public:
-    GlobalThreadSafeInject()
-        : ThreadSafeInject<I>(nullptr, true)
+    GlobalInject()
+        : InjectBase<I>(globalCtx)
     {
         static_assert(I::modularity_isGlobalInterface(), "The interface must be global.");
     }
 };
+
+//! NOTE Global Inject, Thread-safe (locking) variant of Inject.
+template<class I>
+class GlobalThreadSafeInject : public ThreadSafeInjectBase<I>
+{
+public:
+    GlobalThreadSafeInject()
+        : ThreadSafeInjectBase<I>(globalCtx)
+    {
+        static_assert(I::modularity_isGlobalInterface(), "The interface must be global.");
+    }
+};
+
+//! NOTE Context Inject
+template<class I>
+class ContextInject : public InjectBase<I>
+{
+public:
+
+    ContextInject(const ContextPtr& ctx)
+        : InjectBase<I>(ctx)
+    {
+        static_assert(!I::modularity_isGlobalInterface(), "The interface must be contextual.");
+    }
+
+    ContextInject(const Injectable* inj)
+        : InjectBase<I>(inj)
+    {
+        static_assert(!I::modularity_isGlobalInterface(), "The interface must be contextual.");
+    }
+};
+
+//! NOTE Temporary for compatibility
+template<typename I>
+using Inject = ContextInject<I>;
+
+//! NOTE State less Inject, Thread-safe (locking) variant of Inject.
+template<class I>
+class ContextThreadSafeInject : public ThreadSafeInjectBase<I>
+{
+public:
+    ContextThreadSafeInject(const ContextPtr& ctx)
+        : ThreadSafeInjectBase<I>(ctx)
+    {
+        static_assert(!I::modularity_isGlobalInterface(), "The interface must be contextual.");
+    }
+
+    ContextThreadSafeInject(const Injectable* inj)
+        : ThreadSafeInjectBase<I>(inj)
+    {
+        static_assert(!I::modularity_isGlobalInterface(), "The interface must be contextual.");
+    }
+};
+
+//! NOTE Temporary for compatibility
+template<typename I>
+using ThreadSafeInject = ContextThreadSafeInject<I>;
 }

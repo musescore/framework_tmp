@@ -53,6 +53,8 @@ void EnginePlayback::deinit()
     ONLY_AUDIO_ENGINE_THREAD;
 
     m_sequences.clear();
+    m_saveSoundTracksProgressMap.clear();
+    m_saveSoundTracksWritersMap.clear();
 
     // Explicitly disconnect and clear all channel members before
     // async_disconnectAll() and before the destructor runs. This ensures
@@ -371,7 +373,7 @@ async::Promise<Ret> EnginePlayback::prepareToPlay(TrackSequenceId sequenceId)
     ONLY_AUDIO_ENGINE_THREAD;
     ITrackSequencePtr s = sequence(sequenceId);
     IF_ASSERT_FAILED(s) {
-        return async::make_promise<Ret>([this](auto resolve, auto) {
+        return async::make_promise<Ret>([](auto resolve, auto) {
             return resolve(make_ret(Err::InvalidSequenceId, "invalid sequence id"));
         });
     }
