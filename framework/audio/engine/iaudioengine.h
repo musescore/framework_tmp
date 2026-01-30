@@ -30,7 +30,7 @@
 #include "internal/mixer.h"
 
 namespace muse::audio::engine {
-class IAudioEngine : MODULE_EXPORT_INTERFACE
+class IAudioEngine : MODULE_CONTEXT_INTERFACE
 {
     INTERFACE_ID(IAudioEngine)
 
@@ -47,6 +47,7 @@ public:
 
     using Operation = std::function<void ()>;
     virtual void execOperation(OperationType type, const Operation& func) = 0;
+    virtual OperationType operation() const = 0;
 
     virtual MixerPtr mixer() const = 0;
 

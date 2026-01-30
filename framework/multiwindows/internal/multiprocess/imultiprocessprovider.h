@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2021 MuseScore Limited and others
+ * Copyright (C) 2026 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -19,10 +19,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef MUSE_MI_MITYPES_H
-#define MUSE_MI_MITYPES_H
 
-#include <string>
+ #pragma once
+
+ #include <string>
+ #include <vector>
+
+ #include "global/modularity/imoduleinterface.h"
+ #include "global/async/notification.h"
 
 namespace muse::mi {
 struct InstanceMeta
@@ -30,6 +34,16 @@ struct InstanceMeta
     std::string id;
     bool isServer = false;
 };
-}
 
-#endif // MUSE_MI_MITYPES_H
+class IMultiProcessProvider : MODULE_GLOBAL_INTERFACE
+{
+    INTERFACE_ID(IMultiProcessProvider);
+public:
+    virtual ~IMultiProcessProvider() = default;
+
+    virtual const std::string& selfID() const = 0;
+    virtual bool isMainInstance() const = 0;
+    virtual std::vector<InstanceMeta> instances() const = 0;
+    virtual async::Notification instancesChanged() const = 0;
+};
+}

@@ -19,20 +19,35 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "multiinstancesstubmodule.h"
 
-#include "modularity/ioc.h"
-#include "multiinstancesstubprovider.h"
+#pragma once
 
-using namespace muse::mi;
-using namespace muse::modularity;
+#include <memory>
 
-std::string MultiInstancesModule::moduleName() const
+#include "modularity/imodulesetup.h"
+
+#include "muse_framework_config.h"
+
+namespace muse::mi {
+#ifdef MUSE_MULTICONTEXT_WIP
+class SingleProcessProvider;
+#else
+class MultiProcessProvider;
+#endif
+
+class MultiInstancesModule : public modularity::IModuleSetup
 {
-    return "multiinstances_stub";
-}
+public:
+    std::string moduleName() const override;
+    void registerExports() override;
+    void resolveImports() override;
+    void onPreInit(const IApplication::RunMode& mode) override;
 
-void MultiInstancesModule::registerExports()
-{
-    ioc()->registerExport<IMultiInstancesProvider>(moduleName(), new MultiInstancesStubProvider());
+private:
+#ifdef MUSE_MULTICONTEXT_WIP
+    std::shared_ptr<SingleProcessProvider> m_windowsProvider;
+#else
+    std::shared_ptr<MultiProcessProvider> m_windowsProvider;
+#endif
+};
 }

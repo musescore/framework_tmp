@@ -44,7 +44,7 @@ using namespace muse::ui;
 using namespace muse::async;
 
 InteractiveProvider::InteractiveProvider(const modularity::ContextPtr& iocCtx)
-    : QObject(), Injectable(iocCtx)
+    : QObject(), Contextable(iocCtx)
 {
     connect(qApp, &QGuiApplication::focusWindowChanged, this, [this](QWindow* window) {
         raiseWindowInStack(window);
@@ -499,16 +499,12 @@ QWindow* InteractiveProvider::topWindow() const
     }
 
     // QWidget
-    {
-        QWidget* qwidget = qobject_cast<QWidget*>(last.window);
-        QWindow* qwindow = qwidget->windowHandle();
-        IF_ASSERT_FAILED(qwindow) {
-            return mainWin;
-        }
-        return qwindow;
+    QWidget* qwidget = qobject_cast<QWidget*>(last.window);
+    QWindow* qwindow = qwidget->windowHandle();
+    IF_ASSERT_FAILED(qwindow) {
+        return mainWin;
     }
-
-    return mainWin;
+    return qwindow;
 }
 
 bool InteractiveProvider::topWindowIsWidget() const

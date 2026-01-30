@@ -30,7 +30,7 @@
 #include "ui/iuiactionsregister.h"
 #include "async/asyncable.h"
 #include "io/ifilesystem.h"
-#include "multiinstances/imultiinstancesprovider.h"
+#include "multiwindows/imultiwindowsprovider.h"
 
 namespace muse {
 class XmlStreamReader;
@@ -38,16 +38,16 @@ class XmlStreamWriter;
 }
 
 namespace muse::shortcuts {
-class ShortcutsRegister : public IShortcutsRegister, public Injectable, public async::Asyncable
+class ShortcutsRegister : public IShortcutsRegister, public Contextable, public async::Asyncable
 {
     GlobalInject<IShortcutsConfiguration> configuration;
     GlobalInject<io::IFileSystem> fileSystem;
-    GlobalInject<mi::IMultiInstancesProvider> multiInstancesProvider;
-    Inject<muse::ui::IUiActionsRegister> uiactionsRegister = { this };
+    GlobalInject<mi::IMultiWindowsProvider> multiwindowsProvider;
+    ContextInject<muse::ui::IUiActionsRegister> uiactionsRegister = { this };
 
 public:
     ShortcutsRegister(const modularity::ContextPtr& iocCtx)
-        : Injectable(iocCtx) {}
+        : Contextable(iocCtx) {}
 
     void init();
 

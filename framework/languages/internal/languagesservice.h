@@ -29,21 +29,21 @@
 #include "ilanguagesconfiguration.h"
 #include "framework/network/inetworkmanagercreator.h"
 #include "io/ifilesystem.h"
-#include "multiinstances/imultiinstancesprovider.h"
+#include "multiwindows/imultiwindowsprovider.h"
 
 class QTranslator;
 
 namespace muse::languages {
-class LanguagesService : public ILanguagesService, public Injectable, public async::Asyncable
+class LanguagesService : public ILanguagesService, public Contextable, public async::Asyncable
 {
     GlobalInject<ILanguagesConfiguration> configuration;
     GlobalInject<network::INetworkManagerCreator> networkManagerCreator;
     GlobalInject<io::IFileSystem> fileSystem;
-    GlobalInject<mi::IMultiInstancesProvider> multiInstancesProvider;
+    GlobalInject<mi::IMultiWindowsProvider> multiwindowsProvider;
 
 public:
     LanguagesService(const modularity::ContextPtr& iocCtx)
-        : Injectable(iocCtx) {}
+        : Contextable(iocCtx) {}
 
     void init();
 

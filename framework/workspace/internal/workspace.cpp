@@ -21,7 +21,7 @@
  */
 #include "workspace.h"
 
-#include "multiinstances/resourcelockguard.h"
+#include "multiwindows/resourcelockguard.h"
 
 #include "workspacefile.h"
 #include "workspaceerrors.h"
@@ -32,11 +32,11 @@ using namespace muse;
 using namespace muse::workspace;
 
 Workspace::Workspace(const io::path_t& filePath, const modularity::ContextPtr& iocCtx)
-    : Injectable(iocCtx)
+    : Contextable(iocCtx)
 {
     m_file = std::make_shared<WorkspaceFile>(filePath);
 
-    multiInstancesProvider()->resourceChanged().onReceive(this, [this](const std::string& resourceName){
+    multiwindowsProvider()->resourceChanged().onReceive(this, [this](const std::string& resourceName){
         if (resourceName == fileResourceName()) {
             reload();
         }
@@ -158,7 +158,7 @@ io::path_t Workspace::filePath() const
 
 Ret Workspace::load()
 {
-    mi::ReadResourceLockGuard resource_guard(multiInstancesProvider.get(), fileResourceName());
+    mi::ReadResourceLockGuard resource_guard(multiwindowsProvider.get(), fileResourceName());
     return m_file->load();
 }
 
@@ -177,7 +177,7 @@ Ret Workspace::save()
 
 Ret Workspace::doSave()
 {
-    mi::WriteResourceLockGuard resource_guard(multiInstancesProvider.get(), fileResourceName());
+    mi::WriteResourceLockGuard resource_guard(multiwindowsProvider.get(), fileResourceName());
     m_file->setMeta("app_version", Val(application()->version().toStdString()));
     return m_file->save();
 }

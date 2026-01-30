@@ -35,6 +35,19 @@ public:
     void registerExports() override;
     void onInit(const IApplication::RunMode& mode) override;
 
+    // Context
+    modularity::IContextSetup* newContext(const muse::modularity::ContextPtr& ctx) const override;
+};
+
+class DockContext : public modularity::IContextSetup
+{
+public:
+    DockContext(const muse::modularity::ContextPtr& ctx)
+        : modularity::IContextSetup(ctx) {}
+
+    void registerExports() override;
+    void onInit(const IApplication::RunMode& mode) override;
+
 private:
     std::shared_ptr<DockWindowActionsController> m_actionsController;
 };

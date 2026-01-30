@@ -28,11 +28,14 @@
 
 #include "log.h"
 
+#include "modularity/ioc.h"
 #include "thirdparty/KDDockWidgets/src/DockWidgetQuick.h"
 #include "thirdparty/KDDockWidgets/src/private/quick/FrameQuick_p.h"
 #include "thirdparty/KDDockWidgets/src/private/FloatingWindow_p.h"
 
 #include "ui/qml/Muse/Ui/navigationsection.h"
+
+#include "muse_framework_config.h"
 
 namespace muse::dock {
 static QSize adjustSizeByConstraints(const QSize& size, const QSize& min, const QSize& max)
@@ -72,7 +75,7 @@ public:
 using namespace muse::dock;
 
 DockBase::DockBase(DockType type, QQuickItem* parent)
-    : QQuickItem(parent)
+    : QQuickItem(parent), Contextable(muse::iocCtxForQmlObject(this))
 {
     Q_ASSERT(type != DockType::Undefined);
 
@@ -627,11 +630,18 @@ void DockBase::componentComplete()
         return;
     }
 
+    QString name = objectName();
+#ifdef MUSE_MULTICONTEXT_WIP
+    if (iocContext()) {
+        name +=  "_" + QString::number(iocContext()->id);
+    }
+#endif
+
     if (content->objectName().isEmpty()) {
-        content->setObjectName(objectName() + "_content");
+        content->setObjectName(name + "_content");
     }
 
-    m_dockWidget = new DockWidgetImpl(objectName());
+    m_dockWidget = new DockWidgetImpl(name);
     m_dockWidget->setWidget(content);
     m_dockWidget->setTitle(m_title);
 

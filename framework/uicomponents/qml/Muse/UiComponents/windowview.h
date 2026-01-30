@@ -46,7 +46,7 @@ class INavigationControl;
 }
 
 namespace muse::uicomponents {
-class WindowView : public QObject, public QQmlParserStatus, public Injectable, public async::Asyncable
+class WindowView : public QObject, public QQmlParserStatus, public Contextable, public async::Asyncable
 {
     Q_OBJECT
     Q_INTERFACES(QQmlParserStatus)
@@ -75,9 +75,9 @@ class WindowView : public QObject, public QQmlParserStatus, public Injectable, p
 
 protected:
     GlobalInject<ui::IUiConfiguration> uiConfiguration;
-    Inject<ui::IMainWindow> mainWindow = { this };
-    Inject<ui::INavigationController> navigationController = { this };
-    Inject<ui::IInteractiveProvider> interactiveProvider = { this };
+    ContextInject<ui::IMainWindow> mainWindow = { this };
+    ContextInject<ui::INavigationController> navigationController = { this };
+    ContextInject<ui::IInteractiveProvider> interactiveProvider = { this };
 
 public:
     explicit WindowView(QQuickItem* parent = nullptr);
@@ -129,6 +129,8 @@ public:
 
     bool isContentReady() const;
     void setIsContentReady(bool ready);
+
+    virtual void repositionWindowIfNeed() {}
 
 public slots:
     void setEngine(QQmlEngine* engine);
@@ -189,7 +191,6 @@ protected:
     virtual void updateGeometry() = 0;
     virtual QRect viewGeometry() const;
     void updateSize(const QSize& newSize);
-    virtual void repositionWindowIfNeed() {}
 
     void resolveNavigationParentControl();
     void activateNavigationParentControl();

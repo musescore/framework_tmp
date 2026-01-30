@@ -26,12 +26,12 @@
 #include <qqmlintegration.h>
 
 #include "modularity/ioc.h"
-#include "imultiinstancesprovider.h"
+#include "internal/multiprocess/imultiprocessprovider.h"
 
 #include "async/asyncable.h"
 
 namespace muse::mi {
-class MultiInstancesDevModel : public QObject, public Injectable, public async::Asyncable
+class MultiInstancesDevModel : public QObject, public Contextable, public async::Asyncable
 {
     Q_OBJECT
 
@@ -40,7 +40,7 @@ class MultiInstancesDevModel : public QObject, public Injectable, public async::
 
     QML_ELEMENT
 
-    GlobalInject<IMultiInstancesProvider> multiInstancesProvider;
+    GlobalInject<IMultiProcessProvider> multiProcessProvider;
 
 public:
     explicit MultiInstancesDevModel(QObject* parent = nullptr);
