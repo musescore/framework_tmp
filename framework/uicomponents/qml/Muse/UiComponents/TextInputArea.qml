@@ -36,6 +36,7 @@ FocusScope {
     property bool hasText: valueInput.text.length > 0
 
     property bool resizeVerticallyWithText: false
+    property bool allowNewLineByEnter: true
 
     property real textSidePadding: 12
 
@@ -174,16 +175,28 @@ FocusScope {
                 text: root.currentText === undefined ? "" : root.currentText
                 wrapMode: TextInput.Wrap
 
-                TextInputModel {
-                    id: textInputModel
+                ShortcutOverrideModel {
+                    id: shortcutOverrideModel
                 }
 
                 Component.onCompleted: {
-                    textInputModel.init()
+                    shortcutOverrideModel.init()
                 }
 
                 Keys.onShortcutOverride: function(event) {
                     if (readOnly) {
+                        return
+                    }
+
+                    var finishEdit = function(){
+                        event.accepted = false
+                        root.focus = false
+                        root.textEditingFinished(valueInput.text)
+                    }
+
+                    var isNewLineKey = (event.key === Qt.Key_Enter || event.key === Qt.Key_Return) && !event.modifiers
+                    if (!allowNewLineByEnter && isNewLineKey) {
+                        finishEdit()
                         return
                     }
 
@@ -199,13 +212,10 @@ FocusScope {
                         break
                     }
 
-                    if (textInputModel.isShortcutAllowedOverride(event.key, event.modifiers)) {
+                    if (shortcutOverrideModel.isShortcutOverrideAllowed(event.key, event.modifiers)) {
                         event.accepted = true
                     } else {
-                        event.accepted = false
-
-                        root.focus = false
-                        root.textEditingFinished(valueInput.text)
+                        finishEdit()
                     }
                 }
 
