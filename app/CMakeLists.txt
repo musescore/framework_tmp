@@ -87,7 +87,7 @@ option(MU_COMPILE_BUILD_MACOS_APPLE_SILICON "Build for Apple Silicon architectur
 option(MU_COMPILE_INSTALL_QTQML_FILES "Whether to bundle qml files along with the installation (relevant on MacOS only)" ON)
 option(MU_COMPILE_USE_PCH "Use precompiled headers." ON)
 option(MU_COMPILE_USE_UNITY "Use unity build." ON)
-option(MU_COMPILE_USE_CCACHE "Try use ccache" ON)
+option(MU_COMPILE_USE_COMPILER_CACHE "Try to use compiler cache: tries ccache, sccache, buildcache in that order. Use COMPILER_CACHE_PROGRAM to specify a specific compiler cache program." ON)
 
 # === Debug ===
 option(MU_ENABLE_STRING_DEBUG_HACK "Enable string debug hack (only clang)" ON)
@@ -112,9 +112,9 @@ include(${MUSE_FRAMEWORK_SRC_PATH}/cmake/MuseSetupConfiguration.cmake)
 
 include(SetupBuildEnvironment)
 include(GetPlatformInfo)
-if (MUE_COMPILE_USE_CCACHE)
-    include(TryUseCcache)
-endif(MUE_COMPILE_USE_CCACHE)
+if (MU_COMPILE_USE_COMPILER_CACHE)
+    include(SetupCompilerCache)
+endif(MU_COMPILE_USE_COMPILER_CACHE)
 
 
 ###########################################
