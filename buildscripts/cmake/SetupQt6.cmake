@@ -31,9 +31,9 @@ set(qt_components
     Quick
     QuickControls2
     QuickWidgets
-    ShaderTools
     Xml
     Svg
+    ShaderTools
 
     Core5Compat
 )
@@ -76,13 +76,6 @@ if (QT_ADD_LINGUISTTOOLS)
     list(APPEND qt_components LinguistTools)
 endif()
 
-if (QT_ADD_STATEMACHINE)
-    # Note: only used in ExampleView class.
-    # When that class is removed, don't forget to remove this dependency.
-    list(APPEND qt_components StateMachine)
-    list(APPEND QT_LIBRARIES Qt::StateMachine)
-endif()
-
 if(QT_ADD_WEBSOCKET)
     list(APPEND qt_components WebSockets)
     list(APPEND QT_LIBRARIES Qt::WebSockets)
@@ -92,14 +85,13 @@ if (OS_IS_WASM)
     set(QT_WASM_EXTRA_EXPORTED_METHODS ccall)
 endif()
 
-find_package(Qt6 6.3 REQUIRED COMPONENTS ${qt_components})
+find_package(Qt6 6.8 REQUIRED COMPONENTS ${qt_components})
 
 include(QtInstallPaths)
 
 message(STATUS "Qt version: ${Qt6_VERSION}")
 
-
-qt_standard_project_setup(REQUIRES 6.3 SUPPORTS_UP_TO 6.9)
+qt_standard_project_setup(REQUIRES 6.8 SUPPORTS_UP_TO 6.10)
 
 if (QT_IS_STATIC)
     qt_add_library(all_qml_plugins STATIC)

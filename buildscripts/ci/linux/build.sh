@@ -28,15 +28,19 @@ df -h .
 BUILD_TOOLS=$HOME/build_tools
 ARTIFACTS_DIR=build.artifacts
 CRASH_REPORT_URL=""
+BUILD_NUMBER=""
 BUILD_MODE=""
 SUFFIX="" # appended to `mscore` command name to avoid conflicts (e.g. `mscoredev`)
+BUILD_CRASHPAD_CLIENT="OFF"
+BUILD_PIPEWIRE=OFF
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         -n|--number) BUILD_NUMBER="$2"; shift ;;
-        --crash_log_url) CRASH_REPORT_URL="$2"; shift ;;
+        --crash_log_url) CRASH_REPORT_URL="$2"; BUILD_CRASHPAD_CLIENT=ON; shift ;;
         --build_mode) BUILD_MODE="$2"; shift ;;
         --arch) PACKARCH="$2"; shift ;;
+        --build-pipewire) BUILD_PIPEWIRE=ON ;;
         *) echo "Unknown parameter passed: $1"; exit 1 ;;
     esac
     shift
@@ -69,9 +73,6 @@ if [ "$PACKARCH" == "aarch64" ] || [ "$PACKARCH" == "armv7l" ]; then
   MUSESCORE_BUILD_UPDATE_MODULE="OFF"
 fi
 
-# TODO: https://github.com/musescore/MuseScore/issues/11689
-BUILD_VST=OFF
-
 echo "=== BUILD ==="
 
 MUSESCORE_REVISION=$(git rev-parse --short=7 HEAD)
@@ -82,10 +83,11 @@ MUSE_APP_INSTALL_SUFFIX=$SUFFIX \
 MUSESCORE_BUILD_NUMBER=$BUILD_NUMBER \
 MUSESCORE_REVISION=$MUSESCORE_REVISION \
 MUSESCORE_CRASHREPORT_URL=$CRASH_REPORT_URL \
-MUSESCORE_BUILD_VST_MODULE=$BUILD_VST \
-MUSESCORE_BUILD_CRASHPAD_CLIENT=${MUSESCORE_BUILD_CRASHPAD_CLIENT:-"ON"} \
+MUSESCORE_BUILD_CRASHPAD_CLIENT=$BUILD_CRASHPAD_CLIENT \
 MUSESCORE_BUILD_UPDATE_MODULE=${MUSESCORE_BUILD_UPDATE_MODULE:-"ON"} \
+MUSESCORE_BUILD_VST_MODULE="ON" \
 MUSESCORE_BUILD_WEBSOCKET="ON" \
+MUSESCORE_BUILD_PIPEWIRE_AUDIO_DRIVER=$BUILD_PIPEWIRE \
 bash ./ninja_build.sh -t appimage
 
 

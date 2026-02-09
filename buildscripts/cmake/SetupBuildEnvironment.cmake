@@ -60,24 +60,23 @@ endif()
 
 # Mac-specific
 if(OS_IS_MAC)
-    set(MACOSX_DEPLOYMENT_TARGET 10.14)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14)
+    set(MACOSX_DEPLOYMENT_TARGET 10.15.4)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15.4)
 endif(OS_IS_MAC)
 
 # MSVC-specific
 if(CC_IS_MSVC)
-    # TODO: remove this
-    # It is necessary because of the following line in src/app/CMakeLists.txt:
-    # `set_target_properties(${QtLibrary} PROPERTIES MAP_IMPORTED_CONFIG_DEBUG "RELEASE")`
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL") # i.e. not MultiThreaded$<$<CONFIG:Debug>:Debug>DLL
-
     add_compile_options("/EHsc")
     add_compile_options("/utf-8")
+    add_compile_options("/MP")
+    add_compile_options("/bigobj")
 
     add_compile_definitions(WIN32 _WINDOWS)
     add_compile_definitions(_UNICODE UNICODE)
     add_compile_definitions(_USE_MATH_DEFINES)
     add_compile_definitions(NOMINMAX)
+    
+    add_link_options("/NODEFAULTLIB:LIBCMT")
 endif()
 
 # MinGW-specific
@@ -94,23 +93,27 @@ endif()
 
 # Wasm-specific
 if(CC_IS_EMCC)
-    set(EMCC_CMAKE_TOOLCHAIN "" CACHE FILEPATH "Path to EMCC CMake Emscripten.cmake")
-    set(EMCC_INCLUDE_PATH "." CACHE PATH "Path to EMCC include dir")
-    set(EMCC_COMPILE_FLAGS "--bind -o .html --preload-file ../../files")
 
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/public_html)
-    set(CMAKE_EXECUTABLE_SUFFIX ".html")
+    set(MU_ROOT ${CMAKE_CURRENT_LIST_DIR}/../..)
+
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${MU_ROOT}/build.artifacts)
+
+    set(EMCC_COMPILE_FLAGS "-s USE_ZLIB=1 -O2")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EMCC_COMPILE_FLAGS}")
-    set(CMAKE_TOOLCHAIN_FILE ${EMCC_CMAKE_TOOLCHAIN})
-    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-    # for QtCreator
-    include_directories(AFTER
-        ${EMCC_INCLUDE_PATH}
-        ${EMCC_INCLUDE_PATH}/libcxx
-        ${EMCC_INCLUDE_PATH}/libc
-    )
+    if (BUILD_IS_DEBUG)
+        set(EMCC_LINKER_FLAGS -O0)
+    else()
+        set(EMCC_LINKER_FLAGS -Os)
+    endif()
+
+
 endif(CC_IS_EMCC)
 
 # Warnings
 include(SetupCompileWarnings)
+
+# User overrides
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/SetupBuildEnvironment.user.cmake")
+    include(${CMAKE_CURRENT_LIST_DIR}/SetupBuildEnvironment.user.cmake)
+endif()
