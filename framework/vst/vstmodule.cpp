@@ -55,8 +55,8 @@ std::string VSTModule::moduleName() const
 void VSTModule::registerExports()
 {
     m_configuration = std::make_shared<VstConfiguration>();
-    m_pluginModulesRepo = std::make_shared<VstModulesRepository>(globalCtx());
-    m_pluginInstancesRegister = std::make_shared<VstInstancesRegister>(globalCtx());
+    m_pluginModulesRepo = std::make_shared<VstModulesRepository>();
+    m_pluginInstancesRegister = std::make_shared<VstInstancesRegister>();
     m_actionsController = std::make_shared<VstActionsController>(globalCtx());
 
     globalIoc()->registerExport<IVstConfiguration>(moduleName(), m_configuration);
@@ -83,12 +83,12 @@ void VSTModule::resolveImports()
 
     auto synthResolver = globalIoc()->resolve<ISynthResolver>(moduleName());
     if (synthResolver) {
-        synthResolver->registerResolver(AudioSourceType::Vsti, std::make_shared<VstiResolver>(globalCtx()));
+        synthResolver->registerResolver(AudioSourceType::Vsti, std::make_shared<VstiResolver>());
     }
 
     auto fxResolver = globalIoc()->resolve<IFxResolver>(moduleName());
     if (fxResolver) {
-        fxResolver->registerResolver(AudioFxType::VstFx, std::make_shared<VstFxResolver>(globalCtx()));
+        fxResolver->registerResolver(AudioFxType::VstFx, std::make_shared<VstFxResolver>());
     }
 
     auto scannerRegister = globalIoc()->resolve<IAudioPluginsScannerRegister>(moduleName());

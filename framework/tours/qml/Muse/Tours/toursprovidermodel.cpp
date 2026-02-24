@@ -30,6 +30,11 @@ ToursProviderModel::ToursProviderModel(QObject* parent)
 
 void ToursProviderModel::classBegin()
 {
+    init();
+}
+
+void ToursProviderModel::init()
+{
     // TODO: avoid direct usage of ToursProvider, and use IToursProvider only
     ToursProvider* providerPtr = toursProvider();
     connect(providerPtr, &ToursProvider::openTourStep, this, &ToursProviderModel::openTourStep);

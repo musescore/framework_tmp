@@ -58,6 +58,7 @@ private:
 
     void classBegin() override;
     void componentComplete() override {}
+    void init();
 
     muse::tours::ToursProvider* toursProvider() const;
 };

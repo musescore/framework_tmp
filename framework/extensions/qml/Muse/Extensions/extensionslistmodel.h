@@ -90,7 +90,7 @@ private:
 
     void classBegin() override;
     void componentComplete() override {}
-
+    void init();
     void load();
 
     void updatePlugin(const Manifest& plugin);

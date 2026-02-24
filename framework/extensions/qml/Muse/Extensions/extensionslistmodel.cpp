@@ -50,6 +50,11 @@ ExtensionsListModel::ExtensionsListModel(QObject* parent)
 
 void ExtensionsListModel::classBegin()
 {
+    init();
+}
+
+void ExtensionsListModel::init()
+{
     provider()->manifestListChanged().onNotify(this, [this]() {
         load();
     });
