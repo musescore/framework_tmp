@@ -20,28 +20,35 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef MUSE_AUDIO_MP3ENCODER_H
-#define MUSE_AUDIO_MP3ENCODER_H
+#pragma once
 
 #include "abstractaudioencoder.h"
 
+#include <cstdint>
+#include <memory>
+#include <vector>
+
 struct LameHandler;
+
+namespace muse::io {
+class IODevice;
+}
 
 namespace muse::audio::encode {
 class Mp3Encoder : public AbstractAudioEncoder
 {
 public:
-    bool init(const io::path_t& path, const SoundTrackFormat& format, const samples_t totalSamplesNumber) override;
+    Mp3Encoder(const SoundTrackFormat&, io::IODevice&);
 
+    ~Mp3Encoder() noexcept override;
+
+    bool begin(samples_t totalSamplesNumber) override;
     size_t encode(samples_t samplesPerChannel, const float* input) override;
-    size_t flush() override;
+    size_t end() override;
 
 private:
-    size_t requiredOutputBufferSize(samples_t totalSamplesNumber) const override;
-    void closeDestination() override;
-
-    LameHandler* m_handler = nullptr;
+    std::vector<std::uint8_t> m_outputBuffer;
+    std::unique_ptr<LameHandler> m_handler;
+    io::IODevice* m_dstDevice = nullptr;
 };
 }
-
-#endif // MUSE_AUDIO_MP3ENCODER_H

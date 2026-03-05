@@ -30,7 +30,6 @@ add_subdirectory(async)
 target_sources(muse_global PRIVATE
     ${KORS_LOGGER_SRC}
     ${KORS_PROFILER_SRC}
-    ${UTFCPP_SRC}
 
     globaltypes.h
     iapplication.h
@@ -129,8 +128,8 @@ target_sources(muse_global PRIVATE
     io/dir.cpp
     io/dir.h
 
-    io/devtools/allzerosfilecorruptor.cpp
-    io/devtools/allzerosfilecorruptor.h
+    io/devtools/allzerosbuffercorruptor.cpp
+    io/devtools/allzerosbuffercorruptor.h
 
     serialization/zipreader.cpp
     serialization/zipreader.h
@@ -164,6 +163,19 @@ else()
         thirdparty/pugixml/pugixml.cpp
     )
     target_include_directories(muse_global PRIVATE thirdparty/pugixml)
+endif()
+
+if (MUE_COMPILE_USE_SYSTEM_UTF8CPP)
+    find_package(utf8cpp REQUIRED CONFIG)
+    get_target_property(UTFCPP_INC utf8::cpp INTERFACE_INCLUDE_DIRECTORIES)
+    # UTFCPP_INC is .../include/utf8cpp, and we want .../include so that
+    # #include <utfcpp/utf8.h> resolves correctly
+    get_filename_component(UTFCPP_INC_PARENT "${UTFCPP_INC}" DIRECTORY)
+    message(STATUS "Using system utf8cpp from ${UTFCPP_INC_PARENT} (${UTFCPP_INC})")
+    target_include_directories(muse_global PRIVATE ${UTFCPP_INC_PARENT})
+    target_compile_definitions(muse_global PRIVATE SYSTEM_UTFCPP)
+else()
+    target_sources(muse_global PRIVATE ${UTFCPP_SRC})
 endif()
 
 if (MUSE_THREADS_SUPPORT)

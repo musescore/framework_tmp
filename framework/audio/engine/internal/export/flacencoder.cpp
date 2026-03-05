@@ -26,46 +26,58 @@
 
 #include "../dsp/audiomathutils.h"
 
+#include "global/io/iodevice.h"
+
 #include "log.h"
 
-using namespace muse::audio;
-using namespace muse::audio::encode;
-
-struct FlacHandler : public FLAC::Encoder::File
+namespace muse::audio::encode {
+class FlacHandler final : public FLAC::Encoder::Stream
 {
-    using ProgressCallBack = std::function<void (int64_t /*current*/, int64_t /*total*/)>;
-
-    FlacHandler(const ProgressCallBack& progressCallBack)
-        : FLAC::Encoder::File(), m_callBack(progressCallBack) {}
-
-    void progress_callback(FLAC__uint64 bytes_written,
-                           FLAC__uint64 samples_written,
-                           uint32_t frames_written,
-                           uint32_t total_frames_estimate) override
+public:
+    explicit FlacHandler(io::IODevice& outDev)
+        : m_outDev{&outDev}
     {
-        LOGI() << "wrote " << bytes_written << " bytes, "
-               << samples_written << " samples, "
-               << frames_written << " frames\n"
-               << "TOTAL FRAMES: " << total_frames_estimate;
-
-        m_callBack(frames_written * 4, total_frames_estimate);
+        DO_ASSERT(m_outDev);
     }
 
-    ProgressCallBack m_callBack;
+protected:
+    FLAC__StreamEncoderWriteStatus write_callback(const FLAC__byte buffer[], const size_t bytes, uint32_t, uint32_t) override
+    {
+        if (m_outDev->write(buffer, bytes) != bytes) {
+            return FLAC__STREAM_ENCODER_WRITE_STATUS_FATAL_ERROR;
+        }
+
+        return FLAC__STREAM_ENCODER_WRITE_STATUS_OK;
+    }
+
+    FLAC__StreamEncoderSeekStatus seek_callback(const FLAC__uint64 absolute_byte_offset) override
+    {
+        if (!m_outDev->seek(absolute_byte_offset)) {
+            return FLAC__STREAM_ENCODER_SEEK_STATUS_ERROR;
+        }
+
+        return FLAC__STREAM_ENCODER_SEEK_STATUS_OK;
+    }
+
+    FLAC__StreamEncoderTellStatus tell_callback(FLAC__uint64* absolute_byte_offset) override
+    {
+        *absolute_byte_offset = m_outDev->pos();
+        return FLAC__STREAM_ENCODER_TELL_STATUS_OK;
+    }
+
+private:
+    io::IODevice* m_outDev;
 };
 
-bool FlacEncoder::init(const io::path_t& path, const SoundTrackFormat& format, const samples_t totalSamplesNumber)
+FlacEncoder::FlacEncoder(const SoundTrackFormat& format, io::IODevice& dstDevice)
+    : AbstractAudioEncoder(format), m_flac{std::make_unique<FlacHandler>(dstDevice)}
 {
-    if (!format.isValid()) {
-        return false;
-    }
+}
 
-    m_format = format;
+FlacEncoder::~FlacEncoder() noexcept = default;
 
-    m_flac = new FlacHandler([this](int64_t current, int64_t total){
-        m_progress.progress(current, total);
-    });
-
+bool FlacEncoder::begin(const samples_t totalSamplesNumber)
+{
     int bitsPerSample = 0;
     switch (m_format.sampleFormat) {
     case AudioSampleFormat::Int16:
@@ -99,21 +111,15 @@ bool FlacEncoder::init(const io::path_t& path, const SoundTrackFormat& format, c
     metadata[1]->length = 1234; /* set the padding length */
     m_flac->set_metadata(metadata, 2);
 
-    if (!openDestination(path)) {
+    if (m_flac->init() != FLAC__STREAM_ENCODER_INIT_STATUS_OK) {
         return false;
     }
-
-    prepareOutputBuffer(totalSamplesNumber);
 
     return true;
 }
 
-size_t FlacEncoder::encode(samples_t samplesPerChannel, const float* input)
+size_t FlacEncoder::encode(const samples_t samplesPerChannel, const float* input)
 {
-    IF_ASSERT_FAILED(m_flac) {
-        return 0;
-    }
-
     size_t result = 0;
     size_t totalSamplesNumber = samplesPerChannel * m_format.outputSpec.audioChannelCount;
     uint32_t frameSize = 1024;
@@ -148,6 +154,7 @@ size_t FlacEncoder::encode(samples_t samplesPerChannel, const float* input)
 
         if (m_flac->process_interleaved(intermBuff.data(), samplesPerChannelToProcess)) {
             result += stepSize;
+            m_progress.progress(i, totalSamplesNumber);
         } else {
             break;
         }
@@ -156,31 +163,9 @@ size_t FlacEncoder::encode(samples_t samplesPerChannel, const float* input)
     return result;
 }
 
-size_t FlacEncoder::flush()
+size_t FlacEncoder::end()
 {
     m_flac->finish();
     return 0;
 }
-
-size_t FlacEncoder::requiredOutputBufferSize(samples_t totalSamplesNumber) const
-{
-    return totalSamplesNumber;
-}
-
-bool FlacEncoder::openDestination(const io::path_t& path)
-{
-    IF_ASSERT_FAILED(m_flac) {
-        return false;
-    }
-
-    if (m_flac->init(path.c_str()) != FLAC__STREAM_ENCODER_INIT_STATUS_OK) {
-        return false;
-    }
-
-    return true;
-}
-
-void FlacEncoder::closeDestination()
-{
-    delete m_flac;
 }

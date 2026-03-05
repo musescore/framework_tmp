@@ -33,7 +33,7 @@
 
 #include "accessibleobject.h"
 #include "accessiblestub.h"
-#include "accessibleiteminterface.h"
+#include "accessiblewindowinterface.h"
 #include "iqaccessibleinterfaceregister.h"
 
 #include "log.h"
@@ -50,7 +50,7 @@ using namespace muse::modularity;
 using namespace muse::accessibility;
 
 AccessibleObject* s_rootObject = nullptr;
-std::shared_ptr<IQAccessibleInterfaceRegister> accessibleInterfaceRegister = nullptr;
+std::shared_ptr<IQAccessibleInterfaceRegister> s_accessibleInterfaceRegister = nullptr;
 
 static void updateHandlerNoop(QAccessibleEvent*)
 {
@@ -68,13 +68,17 @@ AccessibilityController::AccessibilityController(const muse::modularity::Context
 
 AccessibilityController::~AccessibilityController()
 {
-    m_pretendFocusTimer.stop();
-    unreg(this);
 }
 
-QAccessibleInterface* AccessibilityController::accessibleInterface(QObject*)
+QAccessibleInterface* AccessibilityController::accessibleInterface(QObject* window)
 {
-    return static_cast<QAccessibleInterface*>(new AccessibleItemInterface(s_rootObject));
+    return static_cast<QAccessibleInterface*>(new AccessibleWindowInterface(window, s_rootObject));
+}
+
+void AccessibilityController::deinit()
+{
+    m_pretendFocusTimer.stop();
+    unreg(this);
 }
 
 void AccessibilityController::setAccessibilityEnabled(bool enabled)
@@ -84,11 +88,11 @@ void AccessibilityController::setAccessibilityEnabled(bool enabled)
 
 static QAccessibleInterface* muAccessibleFactory(const QString& classname, QObject* object)
 {
-    if (!accessibleInterfaceRegister) {
-        accessibleInterfaceRegister = globalIoc()->resolve<IQAccessibleInterfaceRegister>("accessibility");
+    if (!s_accessibleInterfaceRegister) {
+        s_accessibleInterfaceRegister = globalIoc()->resolve<IQAccessibleInterfaceRegister>("accessibility");
     }
 
-    auto interfaceGetter = accessibleInterfaceRegister->interfaceGetter(classname);
+    auto interfaceGetter = s_accessibleInterfaceRegister->interfaceGetter(classname);
     if (interfaceGetter) {
         return interfaceGetter(object);
     }
