@@ -42,13 +42,13 @@ using namespace muse::audio::soundtrack;
 static constexpr int PREPARE_STEP = 0;
 static constexpr int ENCODE_STEP = 1;
 
-static encode::AbstractAudioEncoderPtr createEncoder(const SoundTrackType type)
+static encode::AbstractAudioEncoderPtr createEncoder(const SoundTrackFormat& format, io::IODevice& dstDevice)
 {
-    switch (type) {
-    case SoundTrackType::MP3: return std::make_unique<encode::Mp3Encoder>();
-    case SoundTrackType::OGG: return std::make_unique<encode::OggEncoder>();
-    case SoundTrackType::FLAC: return std::make_unique<encode::FlacEncoder>();
-    case SoundTrackType::WAV: return std::make_unique<encode::WavEncoder>();
+    switch (format.type) {
+    case SoundTrackType::MP3: return std::make_unique<encode::Mp3Encoder>(format, dstDevice);
+    case SoundTrackType::OGG: return std::make_unique<encode::OggEncoder>(format, dstDevice);
+    case SoundTrackType::FLAC: return std::make_unique<encode::FlacEncoder>(format, dstDevice);
+    case SoundTrackType::WAV: return std::make_unique<encode::WavEncoder>(format, dstDevice);
     case SoundTrackType::Undefined: break;
     }
 
@@ -56,12 +56,15 @@ static encode::AbstractAudioEncoderPtr createEncoder(const SoundTrackType type)
     return nullptr;
 }
 
-SoundTrackWriter::SoundTrackWriter(const io::path_t& destination, const SoundTrackFormat& format,
+SoundTrackWriter::SoundTrackWriter(io::IODevice& dstDevice, const SoundTrackFormat& format,
                                    const msecs_t totalDuration, IAudioSourcePtr source,
                                    const modularity::ContextPtr& iocCtx)
     : muse::Contextable(iocCtx), m_source(std::move(source))
 {
     if (!m_source) {
+        return;
+    }
+    IF_ASSERT_FAILED(format.isValid()) {
         return;
     }
 
@@ -73,23 +76,15 @@ SoundTrackWriter::SoundTrackWriter(const io::path_t& destination, const SoundTra
     m_intermBuffer.resize(intermediateSamplesNumber);
     m_renderStep = outputSpec.samplesPerChannel;
 
-    m_encoderPtr = createEncoder(format.type);
-
+    m_encoderPtr = createEncoder(format, dstDevice);
     if (!m_encoderPtr) {
         return;
     }
 
-    m_encoderPtr->init(destination, format, totalSamplesNumber);
+    m_encoderPtr->begin(totalSamplesNumber);
     m_encoderPtr->progress().progressChanged().onReceive(this, [this](int64_t current, int64_t total, std::string) {
         sendStepProgress(ENCODE_STEP, current, total);
     });
-}
-
-SoundTrackWriter::~SoundTrackWriter()
-{
-    if (m_encoderPtr) {
-        m_encoderPtr->deinit();
-    }
 }
 
 Ret SoundTrackWriter::write()
@@ -106,7 +101,7 @@ Ret SoundTrackWriter::write()
     m_source->setIsActive(true);
 
     DEFER {
-        m_encoderPtr->flush();
+        m_encoderPtr->end();
 
         audioEngine()->setMode(RenderMode::IdleMode);
 

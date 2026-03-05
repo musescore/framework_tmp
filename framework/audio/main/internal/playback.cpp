@@ -89,10 +89,11 @@ void Playback::init()
         m_masterOutputParamsChanged.send(params);
     });
 
-    m_saveSoundTrackProgressStream.onReceive(this, [this](TrackSequenceId seqId, int64_t current, int64_t total) {
+    m_saveSoundTrackProgressStream.onReceive(this, [this](TrackSequenceId seqId, int64_t current, int64_t total,
+                                                          SaveSoundTrackStage stage) {
         auto it = m_saveSoundTrackProgressChannels.find(seqId);
         if (it != m_saveSoundTrackProgressChannels.end()) {
-            it->second.send(current, total);
+            it->second.send(current, total, stage);
         }
     });
 }
@@ -639,13 +640,13 @@ async::Promise<AudioSignalChanges> Playback::masterSignalChanges() const
     }, PromiseType::AsyncByBody);
 }
 
-async::Promise<bool> Playback::saveSoundTrack(const TrackSequenceId sequenceId, const io::path_t& destination,
-                                              const SoundTrackFormat& format)
+async::Promise<bool> Playback::saveSoundTrack(const TrackSequenceId sequenceId, const SoundTrackFormat& format,
+                                              io::IODevice& dstDevice)
 {
     ONLY_AUDIO_MAIN_THREAD;
-    return async::make_promise<bool>([this, sequenceId, destination, format](auto resolve, auto reject) {
+    return async::make_promise<bool>([this, sequenceId, format, &dstDevice](auto resolve, auto reject) {
         ONLY_AUDIO_MAIN_THREAD;
-        Msg msg = rpc::make_request(Method::SaveSoundTrack, RpcPacker::pack(sequenceId, destination, format));
+        Msg msg = rpc::make_request(Method::SaveSoundTrack, RpcPacker::pack(sequenceId, format, reinterpret_cast<uintptr_t>(&dstDevice)));
         channel()->send(msg, [resolve, reject](const Msg& res) {
             ONLY_AUDIO_MAIN_THREAD;
             Ret ret;
@@ -670,13 +671,13 @@ void Playback::abortSavingAllSoundTracks()
     channel()->send(msg);
 }
 
-async::Channel<int64_t, int64_t> Playback::saveSoundTrackProgressChanged(const TrackSequenceId sequenceId) const
+SaveSoundTrackProgress Playback::saveSoundTrackProgressChanged(const TrackSequenceId sequenceId) const
 {
     auto it = m_saveSoundTrackProgressChannels.find(sequenceId);
     if (it == m_saveSoundTrackProgressChannels.end()) {
-        it = m_saveSoundTrackProgressChannels.insert({ sequenceId, async::Channel<int64_t, int64_t>() }).first;
+        it = m_saveSoundTrackProgressChannels.insert({ sequenceId, SaveSoundTrackProgress() }).first;
 
-        async::Channel<int64_t, int64_t> ch;
+        SaveSoundTrackProgress ch;
 
         Msg msg = rpc::make_request(Method::GetSaveSoundTrackProgress, RpcPacker::pack(sequenceId));
         channel()->send(msg, [this, ch](const Msg& res) {

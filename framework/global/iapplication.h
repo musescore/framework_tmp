@@ -47,6 +47,11 @@ public:
         AudioPluginRegistration,
     };
 
+    enum FinishMode {
+        Default,
+        Restart
+    };
+
     virtual String name() const = 0;
     virtual String title() const = 0;
 
@@ -65,7 +70,7 @@ public:
 
     virtual modularity::ContextPtr setupNewContext(const StringList& args = {}) = 0;
     virtual void destroyContext(const modularity::ContextPtr& ctx) = 0;
-    virtual int contextCount() const = 0;
+    virtual size_t contextCount() const = 0;
     virtual std::vector<modularity::ContextPtr> contexts() const = 0;
 
     virtual void processEvents() = 0;

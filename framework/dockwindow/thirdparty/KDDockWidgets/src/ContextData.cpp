@@ -46,4 +46,9 @@ void ContextData::destroyContext(int ctx)
 
     s_data.erase(ctx);
 }
+
+size_t ContextData::contextCount()
+{
+    return s_data.size();
+}
 }
