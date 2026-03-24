@@ -40,7 +40,6 @@
 /* ============================================== */
 #cmakedefine MUSE_CONFIGURATION_IS_WEB 1
 #cmakedefine MUSE_THREADS_SUPPORT 1
-#cmakedefine MUSE_MULTICONTEXT_WIP 1
 
 /* ============================================== */
 /* Modules                                        */
@@ -123,6 +122,7 @@
 #cmakedefine MUSE_MODULE_MULTIWINDOWS 1
 #cmakedefine MUSE_MODULE_MULTIWINDOWS_TESTS 1
 #cmakedefine MUSE_MODULE_MULTIWINDOWS_API 1
+#cmakedefine MUSE_MODULE_MULTIWINDOWS_SINGLEPROC_MODE 1
 
 #cmakedefine MUSE_MODULE_MUSESAMPLER 1
 #cmakedefine MUSE_MODULE_MUSESAMPLER_TESTS 1

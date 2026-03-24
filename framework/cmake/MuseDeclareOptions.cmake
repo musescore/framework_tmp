@@ -65,7 +65,9 @@ declare_muse_module_opt(LANGUAGES ON)
 declare_muse_module_opt(LEARN ON)
 declare_muse_module_opt(MIDI ON)
 declare_muse_module_opt(MPE ON)
+
 declare_muse_module_opt(MULTIWINDOWS ON)
+option(MUSE_MODULE_MULTIWINDOWS_SINGLEPROC_MODE "Use single process mode for multi windows" OFF)
 
 declare_muse_module_opt(MUSESAMPLER ON)
 option(MUSE_MODULE_MUSESAMPLER_LOAD_IN_DEBUG "Load MuseSampler module in debug builds" OFF)
@@ -98,7 +100,6 @@ option(MUSE_COMPILE_BUILD_64 "Build 64 bit version" ON)
 option(MUSE_COMPILE_ASAN "Enable Address Sanitizer" OFF)
 option(MUSE_COMPILE_USE_PCH "Use precompiled headers." ON)
 option(MUSE_COMPILE_STRING_DEBUG_HACK "Enable string debug hack (only clang)" ON)
-option(MUSE_MULTICONTEXT_WIP "Enable transition code to support multi-context" OFF)
 
 # === Tests ===
 option(MUSE_ENABLE_UNIT_TESTS "Build framework unit tests" ON)

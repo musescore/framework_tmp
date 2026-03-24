@@ -27,28 +27,23 @@
 #include "iglobalconfiguration.h"
 #include "global/types/config.h"
 #include "modularity/ioc.h"
-#include "imainwindow.h"
 #include "internal/iplatformtheme.h"
 #include "io/filewatcher.h"
 
 #include "types/val.h"
-#include "uiarrangement.h"
 #include "async/asyncable.h"
 
 namespace muse::ui {
-class UiConfiguration : public IUiConfiguration, public Contextable, public async::Asyncable
+class UiConfiguration : public IUiConfiguration, public async::Asyncable
 {
     GlobalInject<IPlatformTheme> platformTheme;
     GlobalInject<IGlobalConfiguration> globalConfiguration;
-    ContextInject<IMainWindow> mainWindow = { this };
 
 public:
 
-    UiConfiguration(const modularity::ContextPtr& iocCtx)
-        : Contextable(iocCtx), m_uiArrangement(iocCtx) {}
+    UiConfiguration() = default;
 
     void init();
-    void load();
     void deinit();
 
     ThemeList themes() const override;
@@ -98,35 +93,16 @@ public:
 
     void resetFonts() override;
 
-    double guiScaling() const override;
-    double physicalDpi() const override;
-    double logicalDpi() const override;
+    double guiScaling(const muse::modularity::ContextPtr& ctx) const override;
+    double physicalDpi(const muse::modularity::ContextPtr& ctx) const override;
+    double logicalDpi(const muse::modularity::ContextPtr& ctx) const override;
 
     void setPhysicalDotsPerInch(std::optional<double> dpi) override;
-
-    ValNt<QByteArray> pageState(const QString& pageName) const override;
-    void setPageState(const QString& pageName, const QByteArray& state) override;
-
-    QByteArray windowGeometry() const override;
-    void setWindowGeometry(const QByteArray& geometry) override;
-    async::Notification windowGeometryChanged() const override;
 
     bool isGlobalMenuAvailable() const override;
     bool isSystemDragSupported() const override;
 
     void applyPlatformStyle(QWindow* window) override;
-
-    bool isVisible(const QString& key, bool def = true) const override;
-    void setIsVisible(const QString& key, bool val) override;
-    async::Notification isVisibleChanged(const QString& key) const override;
-
-    QString uiItemState(const QString& itemName) const override;
-    void setUiItemState(const QString& itemName, const QString& value) override;
-    async::Notification uiItemStateChanged(const QString& itemName) const override;
-
-    ToolConfig toolConfig(const QString& toolName, const ToolConfig& defaultConfig) const override;
-    void setToolConfig(const QString& toolName, const ToolConfig& config) override;
-    async::Notification toolConfigChanged(const QString& toolName) const override;
 
     int flickableMaxVelocity() const override;
 
@@ -156,16 +132,13 @@ private:
     ThemeList readThemes() const;
     void writeThemes(const ThemeList& themes);
 
-    void updateToolConfig(const QString& toolName, ToolConfig& userConfig, const ToolConfig& defaultConfig) const;
-
-    UiArrangement m_uiArrangement;
+    QScreen* screen(const muse::modularity::ContextPtr& ctx) const;
 
     async::Notification m_currentThemeChanged;
     async::Notification m_fontChanged;
     async::Notification m_musicalFontChanged;
     async::Notification m_musicalTextFontChanged;
     async::Notification m_iconsFontChanged;
-    async::Notification m_windowGeometryChanged;
 
     ValNt<bool> m_isFollowSystemTheme;
 
