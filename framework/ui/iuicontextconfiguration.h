@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2025 MuseScore Limited and others
+ * Copyright (C) 2026 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -22,26 +22,18 @@
 
 #pragma once
 
-#include "modularity/imodulesetup.h"
-#include "async/asyncable.h"
+#include "modularity/imoduleinterface.h"
 
-namespace muse::audio {
-class AudioModule : public modularity::IModuleSetup, public async::Asyncable
+namespace muse::ui {
+class IUiContextConfiguration : MODULE_CONTEXT_INTERFACE
 {
+    INTERFACE_ID(IUiContextConfiguration)
+
 public:
-    std::string moduleName() const override;
+    virtual ~IUiContextConfiguration() = default;
 
-    void registerExports() override;
-
-    modularity::IContextSetup* newContext(const muse::modularity::ContextPtr& ctx) const override;
-};
-
-class AudioContext : public modularity::IContextSetup
-{
-public:
-    AudioContext(const muse::modularity::ContextPtr& ctx)
-        : modularity::IContextSetup(ctx) {}
-
-    void registerExports() override;
+    virtual double guiScaling() const = 0;
+    virtual double physicalDpi() const = 0;
+    virtual double logicalDpi() const = 0;
 };
 }

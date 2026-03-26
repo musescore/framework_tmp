@@ -36,6 +36,11 @@ AbstractNavigation::AbstractNavigation(QObject* parent)
 {
 }
 
+AbstractNavigation::AbstractNavigation(const muse::modularity::ContextPtr& iocCtx, QObject* parent)
+    : QObject(parent), Contextable(iocCtx)
+{
+}
+
 bool AbstractNavigation::isComponentCompleted() const
 {
     return m_isComponentCompleted;
@@ -254,8 +259,12 @@ QQuickItem* AbstractNavigation::visualItem() const
 AccessibleItem* AbstractNavigation::accessible() const
 {
     if (!m_accessible) {
+        const modularity::ContextPtr& ctx = iocContext();
+        IF_ASSERT_FAILED(ctx) {
+            return nullptr;
+        }
         AbstractNavigation* self = const_cast<AbstractNavigation*>(this);
-        m_accessible = new AccessibleItem(self);
+        m_accessible = new AccessibleItem(ctx, self);
     }
     return m_accessible;
 }

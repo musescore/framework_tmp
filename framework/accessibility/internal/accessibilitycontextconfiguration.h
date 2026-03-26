@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2025 MuseScore Limited and others
+ * Copyright (C) 2026 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -19,29 +19,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
 #pragma once
 
-#include "modularity/imodulesetup.h"
-#include "async/asyncable.h"
+#include "../iaccessibilitycontextconfiguration.h"
 
-namespace muse::audio {
-class AudioModule : public modularity::IModuleSetup, public async::Asyncable
+#include "modularity/ioc.h"
+#include "ui/inavigationcontroller.h"
+#include "../iaccessibilityconfiguration.h"
+
+namespace muse::accessibility {
+class AccessibilityContextConfiguration : public IAccessibilityContextConfiguration, public muse::Contextable
 {
+    GlobalInject<IAccessibilityConfiguration> configuration;
+    ContextInject<ui::INavigationController> navigationController = { this };
+
 public:
-    std::string moduleName() const override;
+    AccessibilityContextConfiguration(const muse::modularity::ContextPtr& iocCtx)
+        : Contextable(iocCtx) {}
 
-    void registerExports() override;
-
-    modularity::IContextSetup* newContext(const muse::modularity::ContextPtr& ctx) const override;
-};
-
-class AudioContext : public modularity::IContextSetup
-{
-public:
-    AudioContext(const muse::modularity::ContextPtr& ctx)
-        : modularity::IContextSetup(ctx) {}
-
-    void registerExports() override;
+    bool isAccessibleActive() const override;
+    bool isAccessibleEnabled() const override;
 };
 }

@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2025 MuseScore Limited and others
+ * Copyright (C) 2026 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -22,26 +22,21 @@
 
 #pragma once
 
-#include "modularity/imodulesetup.h"
-#include "async/asyncable.h"
+#include <QDialog>
 
-namespace muse::audio {
-class AudioModule : public modularity::IModuleSetup, public async::Asyncable
+#include "modularity/ioc.h"
+
+namespace muse::ui {
+class WidgetDialog : public QDialog, public muse::Contextable
 {
+    Q_OBJECT
+
 public:
-    std::string moduleName() const override;
+    explicit WidgetDialog(QWidget* parent = nullptr)
+        : QDialog(parent), muse::Contextable(muse::iocCtxForQWidget(this))
+    {}
 
-    void registerExports() override;
-
-    modularity::IContextSetup* newContext(const muse::modularity::ContextPtr& ctx) const override;
-};
-
-class AudioContext : public modularity::IContextSetup
-{
-public:
-    AudioContext(const muse::modularity::ContextPtr& ctx)
-        : modularity::IContextSetup(ctx) {}
-
-    void registerExports() override;
+    virtual void classBegin() {}
+    virtual void componentComplete() {}
 };
 }

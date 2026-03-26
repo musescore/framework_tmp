@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2025 MuseScore Limited and others
+ * Copyright (C) 2026 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -22,26 +22,29 @@
 
 #pragma once
 
-#include "modularity/imodulesetup.h"
-#include "async/asyncable.h"
+#include "../iuicontextconfiguration.h"
 
-namespace muse::audio {
-class AudioModule : public modularity::IModuleSetup, public async::Asyncable
+#include "global/modularity/ioc.h"
+#include "../imainwindow.h"
+#include "../iuiconfiguration.h"
+
+class QScreen;
+
+namespace muse::ui {
+class UiContextConfiguration : public IUiContextConfiguration, public muse::Contextable
 {
+    GlobalInject<IUiConfiguration> configuration;
+    ContextInject<IMainWindow> mainWindow = { this };
+
 public:
-    std::string moduleName() const override;
+    UiContextConfiguration(const muse::modularity::ContextPtr& ctx)
+        : muse::Contextable(ctx) {}
 
-    void registerExports() override;
+    double guiScaling() const override;
+    double physicalDpi() const override;
+    double logicalDpi() const override;
 
-    modularity::IContextSetup* newContext(const muse::modularity::ContextPtr& ctx) const override;
-};
-
-class AudioContext : public modularity::IContextSetup
-{
-public:
-    AudioContext(const muse::modularity::ContextPtr& ctx)
-        : modularity::IContextSetup(ctx) {}
-
-    void registerExports() override;
+private:
+    QScreen* screen() const;
 };
 }

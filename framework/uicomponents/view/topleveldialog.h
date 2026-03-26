@@ -22,19 +22,21 @@
 
 #pragma once
 
-#include <QDialog>
+#include "ui/view/widgetdialog.h"
 
 #include "modularity/ioc.h"
 #include "ui/imainwindow.h"
 
 namespace muse::uicomponents {
-class TopLevelDialog : public QDialog, public muse::Contextable
+class TopLevelDialog : public muse::ui::WidgetDialog
 {
 public:
     muse::ContextInject<ui::IMainWindow> mainWindow = { this };
 
 public:
     explicit TopLevelDialog(QWidget* parent = nullptr);
+
+    void componentComplete() override {}
 
 protected:
     bool event(QEvent* e) override;

@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2025 MuseScore Limited and others
+ * Copyright (C) 2026 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -22,26 +22,16 @@
 
 #pragma once
 
-#include "modularity/imodulesetup.h"
-#include "async/asyncable.h"
+#include "modularity/imoduleinterface.h"
 
-namespace muse::audio {
-class AudioModule : public modularity::IModuleSetup, public async::Asyncable
+namespace muse::accessibility {
+class IAccessibilityContextConfiguration : MODULE_CONTEXT_INTERFACE
 {
+    INTERFACE_ID(IAccessibilityContextConfiguration)
 public:
-    std::string moduleName() const override;
+    virtual ~IAccessibilityContextConfiguration() = default;
 
-    void registerExports() override;
-
-    modularity::IContextSetup* newContext(const muse::modularity::ContextPtr& ctx) const override;
-};
-
-class AudioContext : public modularity::IContextSetup
-{
-public:
-    AudioContext(const muse::modularity::ContextPtr& ctx)
-        : modularity::IContextSetup(ctx) {}
-
-    void registerExports() override;
+    virtual bool isAccessibleActive() const = 0;
+    virtual bool isAccessibleEnabled() const = 0;
 };
 }
