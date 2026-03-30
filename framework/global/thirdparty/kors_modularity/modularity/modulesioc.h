@@ -33,8 +33,7 @@ SOFTWARE.
 
 #include "imoduleinterface.h"
 
-// TODO: re-enable in next update
-#define __IOC_CHECK_INTERFACE_TYPE
+#define IOC_CHECK_INTERFACE_TYPE
 
 namespace kors::modularity {
 template<class I>
