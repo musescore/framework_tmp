@@ -5,7 +5,7 @@
  * MuseScore
  * Music Composition & Notation
  *
- * Copyright (C) 2024 MuseScore Limited and others
+ * Copyright (C) 2026 MuseScore Limited and others
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -20,29 +20,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "testing/environment.h"
 
-#include <QObject>
-#include <qqmlintegration.h>
+#include "log.h"
 
-#include "modularity/ioc.h"
-#include "iextensionsprovider.h"
-#include "interactive/iinteractive.h"
-
-namespace muse::extensions {
-class DevExtensionsListModel : public QObject, public Contextable
+static muse::testing::SuiteEnvironment multiwindows_se(
 {
-    Q_OBJECT
-
-    QML_ELEMENT
-
-    ContextInject<IExtensionsProvider> provider = { this };
-    ContextInject<IInteractive> interactive = { this };
-
-public:
-    DevExtensionsListModel(QObject* parent = nullptr);
-
-    Q_INVOKABLE QVariantList extensionsList();
-    Q_INVOKABLE void clicked(const QString& uri);
-};
+},
+    nullptr,
+    []() {
+    LOGI() << "multiwindows tests suite post init";
 }
+    );
