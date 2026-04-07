@@ -171,6 +171,74 @@ struct Event {
         return 0;
     }
 
+    static std::vector<Event> fromMidi10SysExBytes(const uint8_t* data, size_t size)
+    {
+        if (!data || size == 0) {
+            return {};
+        }
+
+        // Remove F0/F7 if present
+        if (size >= 2 && data[0] == 0xF0 && data[size - 1] == 0xF7) {
+            data += 1;
+            size -= 2;
+        }
+
+        std::vector<Event> result;
+        size_t pos = 0;
+
+        while (pos < size) {
+            const size_t chunk = std::min<size_t>(6, size - pos);
+            std::array<uint32_t, 4> words = {};
+
+            uint32_t status;
+            if (pos == 0 && chunk == size) {
+                status = 0; // COMPLETE
+            } else if (pos == 0) {
+                status = 1; // START
+            } else if (pos + chunk >= size) {
+                status = 3; // END
+            } else {
+                status = 2; // CONTINUE
+            }
+
+            uint32_t w0 = 0;
+
+            // MessageType = SysEx
+            w0 |= (static_cast<uint32_t>(MessageType::SystemExclusiveData) << 28);
+
+            // Group = 0
+            w0 |= (0 << 24);
+
+            // Status
+            w0 |= (status << 20);
+
+            // Byte count
+            w0 |= (static_cast<uint32_t>(chunk) << 16);
+
+            // First 2 bytes
+            if (chunk >= 1) {
+                w0 |= static_cast<uint32_t>(data[pos + 0]) << 8;
+            }
+            if (chunk >= 2) {
+                w0 |= static_cast<uint32_t>(data[pos + 1]);
+            }
+
+            // Remaining bytes (up to 4)
+            uint32_t w1 = 0;
+            for (size_t i = 2; i < chunk; ++i) {
+                w1 |= static_cast<uint32_t>(data[pos + i]) << (24 - (i - 2) * 8);
+            }
+
+            words[0] = w0;
+            words[1] = w1;
+
+            result.emplace_back(words);
+            pos += chunk;
+        }
+
+        return result;
+    }
+
     static Event fromMidi20Words(const uint32_t* data, size_t count)
     {
         Event e;
@@ -372,7 +440,7 @@ struct Event {
 
         switch (messageType()) {
         case MessageType::ChannelVoice10: return m_data[0] & 0x7F;
-        case MessageType::ChannelVoice20: return scaleDown(m_data[1] >> 16, 16, 7);
+        case MessageType::ChannelVoice20: return static_cast<uint8_t>(scaleDown(m_data[1] >> 16, 16, 7));
         default: assert(false);
         }
         return 0;
@@ -403,7 +471,7 @@ struct Event {
         assertOpcode({ Opcode::NoteOn, Opcode::NoteOff });
 
         switch (messageType()) {
-        case MessageType::ChannelVoice10: return scaleUp(m_data[0] & 0x7F, 7, 16);
+        case MessageType::ChannelVoice10: return static_cast<uint16_t>(scaleUp(m_data[0] & 0x7F, 7, 16));
         case MessageType::ChannelVoice20: return static_cast<uint16_t>(m_data[1] >> 16);
         default: assert(false);
         }
@@ -524,9 +592,11 @@ struct Event {
     {
         uint32_t val = data();
         if (messageType() == MessageType::ChannelVoice20) {
-            return scaleDown(val, 32, 7);
+            val = scaleDown(val, 32, 7);
+        } else if (messageType() == MessageType::ChannelVoice10 && opcode() == Opcode::PitchBend) {
+            val = scaleDown(val, 14, 7);
         }
-        return val;
+        return val & 0x7F;
     }
 
     uint32_t data14() const
@@ -768,7 +838,7 @@ struct Event {
             //D2.3
             case Opcode::AssignableController:
             case Opcode::RegisteredController: {
-                std::vector<std::pair<uint8_t, uint8_t> > controlChanges = {
+                std::vector<std::pair<uint8_t, uint32_t> > controlChanges = {
                     { (opcode() == Opcode::RegisteredController ? 101 : 99), bank() },
                     { (opcode() == Opcode::RegisteredController ? 100 : 98), index() },
                     { 6,  data() >> 25 }, // first 7 bits

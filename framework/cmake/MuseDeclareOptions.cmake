@@ -38,6 +38,9 @@ set(MUSE_MODULE_AUDIO_WORKMODE 1 CACHE STRING "Audio subsystem work mode")
 declare_muse_module_opt(AUDIOPLUGINS ON)
 
 declare_muse_module_opt(AUTOBOT ON)
+
+declare_muse_module_opt(AUTOMATION ON)
+
 declare_muse_module_opt(CLOUD ON)
 option(MUSE_MODULE_CLOUD_MUSESCORECOM "Enable MuseScore.com account" ON)
 
@@ -64,6 +67,7 @@ option(MUSE_MODULE_INTERACTIVE_SYNC_SUPPORTED "Sync interactive supported" ON)
 declare_muse_module_opt(LANGUAGES ON)
 declare_muse_module_opt(LEARN ON)
 declare_muse_module_opt(MIDI ON)
+declare_muse_module_opt(MIDIREMOTE ON)
 declare_muse_module_opt(MPE ON)
 
 declare_muse_module_opt(MULTIWINDOWS ON)

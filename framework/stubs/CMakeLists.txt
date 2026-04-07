@@ -26,6 +26,10 @@ if (NOT MUSE_MODULE_AUDIO)
     add_subdirectory(audio)
 endif()
 
+if (NOT MUSE_MODULE_AUTOMATION)
+    add_subdirectory(automation)
+endif()
+
 if (NOT MUSE_MODULE_CLOUD)
     add_subdirectory(cloud)
 endif()
@@ -44,6 +48,10 @@ endif()
 
 if (NOT MUSE_MODULE_MIDI)
     add_subdirectory(midi)
+endif()
+
+if (NOT MUSE_MODULE_MIDIREMOTE)
+    add_subdirectory(midiremote)
 endif()
 
 if (NOT MUSE_MODULE_MPE)
