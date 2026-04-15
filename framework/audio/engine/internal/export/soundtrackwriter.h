@@ -40,14 +40,13 @@ class IODevice;
 }
 
 namespace muse::audio::soundtrack {
-class SoundTrackWriter : public muse::Contextable, public async::Asyncable
+class SoundTrackWriter : public async::Asyncable
 {
-    muse::ContextInject<engine::IAudioEngine> audioEngine = { this };
-    muse::ContextInject<rpc::IRpcChannel> rpcChannel = { this };
+    muse::GlobalInject<rpc::IRpcChannel> rpcChannel;
+    muse::GlobalInject<engine::IAudioEngine> audioEngine;
 
 public:
-    SoundTrackWriter(io::IODevice& dstDevice, const SoundTrackFormat& format, const msecs_t totalDuration, engine::IAudioSourcePtr source,
-                     const muse::modularity::ContextPtr& iocCtx);
+    SoundTrackWriter(io::IODevice& dstDevice, const SoundTrackFormat& format, const msecs_t totalDuration, engine::IAudioSourcePtr source);
 
     Ret write();
     void abort();
@@ -55,15 +54,15 @@ public:
     Progress progress();
 
 private:
-    Ret generateAudioData();
+    Ret writeStreaming();
 
-    void sendStepProgress(int step, int64_t current, int64_t total);
+    void sendProgress(uint64_t framesWritten, uint64_t totalFrames);
 
     engine::IAudioSourcePtr m_source = nullptr;
 
-    std::vector<float> m_inputBuffer;
     std::vector<float> m_intermBuffer;
     samples_t m_renderStep = 0;
+    samples_t m_totalSamplesPerChannel = 0;
 
     encode::AbstractAudioEncoderPtr m_encoderPtr = nullptr;
 

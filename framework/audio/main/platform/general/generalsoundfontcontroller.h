@@ -27,31 +27,24 @@
 #include "global/async/asyncable.h"
 
 #include "global/modularity/ioc.h"
-#include "interactive/iinteractive.h"
-#include "global/io/ifilesystem.h"
 #include "../../iaudioconfiguration.h"
 #include "audio/common/rpc/irpcchannel.h"
+#include "global/io/ifilesystem.h"
 
 namespace muse::audio {
-class GeneralSoundFontController : public ISoundFontController, public async::Asyncable, public muse::Contextable
+class GeneralSoundFontController : public ISoundFontController, public async::Asyncable
 {
     GlobalInject<IAudioConfiguration> configuration;
+    GlobalInject<rpc::IRpcChannel> channel;
     GlobalInject<io::IFileSystem> fileSystem;
-    ContextInject<IInteractive> interactive = { this };
-    ContextInject<rpc::IRpcChannel> channel = { this };
 
 public:
-    GeneralSoundFontController(const muse::modularity::ContextPtr& iocCtx);
+    GeneralSoundFontController() = default;
 
     void loadSoundFonts() override;
-
     void addSoundFont(const synth::SoundFontUri& uri) override;
 
 private:
-
-    Ret doAddSoundFont(const io::path_t& src, const io::path_t& dst);
-
-    RetVal<io::path_t> resolveInstallationPath(const io::path_t& path) const;
 
     void doLoadSoundFonts();
     void loadSoundFonts(const std::vector<io::path_t>& paths);

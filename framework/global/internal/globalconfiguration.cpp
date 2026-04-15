@@ -39,7 +39,6 @@ static const Settings::Key DEV_MODE_ENABLED_KEY("global", "application/devModeEn
 static const Settings::Key METRIC_UNIT_KEY("global", "application/metricUnit");
 static const Settings::Key HIGH_RESOLUTION_TIMERS("global", "application/highResolutionTimers");
 
-static const std::string MUSESCORE_URL("https://www.musescore.org/");
 static const std::string MUSEHUB_WEB_URL("https://www.musehub.com/");
 
 void GlobalConfiguration::init()
@@ -168,11 +167,6 @@ bool GlobalConfiguration::metricUnit() const
 void GlobalConfiguration::setMetricUnit(bool metricUnit)
 {
     settings()->setSharedValue(METRIC_UNIT_KEY, Val(metricUnit));
-}
-
-std::string GlobalConfiguration::museScoreUrl() const
-{
-    return MUSESCORE_URL;
 }
 
 std::string GlobalConfiguration::museHubWebUrl() const
