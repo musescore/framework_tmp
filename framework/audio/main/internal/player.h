@@ -36,11 +36,9 @@ class Player : public IPlayer, public async::Asyncable
     GlobalInject<rpc::IRpcChannel> channel;
 
 public:
-    explicit Player(const TrackSequenceId sequenceId);
+    Player() = default;
 
     void init();
-
-    TrackSequenceId sequenceId() const override;
 
     async::Promise<Ret> prepareToPlay() override;
 
@@ -53,8 +51,8 @@ public:
     PlaybackStatus playbackStatus() const override;
     async::Channel<PlaybackStatus> playbackStatusChanged() const override;
 
-    void setDuration(const msecs_t durationMsec) override;
-    async::Promise<bool> setLoop(const msecs_t fromMsec, const msecs_t toMsec) override;
+    void setDuration(const secs_t duration) override;
+    async::Promise<bool> setLoop(const secs_t from, const secs_t to) override;
     void resetLoop() override;
 
     secs_t playbackPosition() const override;
@@ -62,7 +60,6 @@ public:
 
 private:
 
-    TrackSequenceId m_sequenceId = -1;
     PlaybackStatus m_playbackStatus = PlaybackStatus::Stopped;
     async::Channel<PlaybackStatus> m_playbackStatusChanged;
 

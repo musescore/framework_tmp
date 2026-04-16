@@ -35,8 +35,6 @@ class IPlayer
 public:
     virtual ~IPlayer() = default;
 
-    virtual TrackSequenceId sequenceId() const = 0;
-
     virtual async::Promise<Ret> prepareToPlay() = 0;
 
     virtual void play(const secs_t delay = 0) = 0;
@@ -48,8 +46,8 @@ public:
     virtual PlaybackStatus playbackStatus() const = 0;
     virtual async::Channel<PlaybackStatus> playbackStatusChanged() const = 0;
 
-    virtual void setDuration(const msecs_t durationMsec) = 0;
-    virtual async::Promise<bool> setLoop(const msecs_t fromMsec, const msecs_t toMsec) = 0;
+    virtual void setDuration(const secs_t duration) = 0;
+    virtual async::Promise<bool> setLoop(const secs_t from, const secs_t to) = 0;
     virtual void resetLoop() = 0;
 
     virtual secs_t playbackPosition() const = 0;

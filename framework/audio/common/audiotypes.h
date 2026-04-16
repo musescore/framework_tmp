@@ -25,6 +25,7 @@
 #include <variant>
 #include <set>
 #include <string>
+#include <cmath>
 
 #include "global/types/number.h"
 #include "global/types/secs.h"
@@ -56,9 +57,6 @@ using volume_db_t = db_t;
 using volume_dbfs_t = db_t;
 using gain_t = float;
 using balance_t = float;
-
-using TrackSequenceId = int32_t;
-using TrackSequenceIdList = std::vector<TrackSequenceId>;
 
 using TrackId = int32_t;
 using TrackIdList = std::vector<TrackId>;
@@ -97,6 +95,56 @@ struct OutputSpec {
     }
 
     inline bool operator!=(const OutputSpec& other) const { return !this->operator==(other); }
+};
+
+struct TimePosition {
+    inline samples_t samples() const { return m_samples; }
+    inline sample_rate_t sampleRate() const { return m_sampleRate; }
+    inline secs_t time() const { return m_time; }
+
+    TimePosition() = default;
+    TimePosition(const TimePosition& other) = default;
+    TimePosition& operator=(const TimePosition& other) = default;
+
+    inline bool operator==(const TimePosition& other) const
+    {
+        return m_samples == other.m_samples && m_sampleRate == other.m_sampleRate;
+    }
+
+    inline bool operator!=(const TimePosition& other) const { return !this->operator==(other); }
+
+    static inline TimePosition fromSamples(samples_t samples, sample_rate_t sampleRate)
+    {
+        IF_ASSERT_FAILED(sampleRate > 0) {
+            return TimePosition();
+        }
+
+        return TimePosition(samples, sampleRate);
+    }
+
+    static inline TimePosition fromTime(secs_t time, sample_rate_t sampleRate)
+    {
+        IF_ASSERT_FAILED(sampleRate > 0) {
+            return TimePosition();
+        }
+
+        IF_ASSERT_FAILED(time.raw() > 0.0) {
+            return TimePosition();
+        }
+
+        return TimePosition(static_cast<samples_t>(std::llround(time.raw() * sampleRate)), sampleRate);
+    }
+
+private:
+    inline TimePosition(samples_t samples, sample_rate_t sampleRate)
+        : m_samples(samples)
+        , m_sampleRate(sampleRate)
+        , m_time(sampleRate > 0 ? static_cast<double>(samples) / sampleRate : 0.0)
+    {}
+
+    samples_t m_samples = 0;
+    sample_rate_t m_sampleRate = 0;
+    secs_t m_time = 0.0; //cache
 };
 
 enum class SoundTrackType {
@@ -554,4 +602,27 @@ enum SaveSoundTrackStage {
 };
 
 using SaveSoundTrackProgress = async::Channel<int64_t /*current*/, int64_t /*total*/, SaveSoundTrackStage>;
+
+struct TransportEvent {
+    enum class Type : unsigned char {
+        Unknown = 0,
+        Play,
+        Pause,
+        Stop,
+        Seek,
+    };
+
+    struct SeekData {
+        secs_t position = 0.;
+    };
+
+    static TransportEvent play() { return { Type::Play, {} }; }
+    static TransportEvent pause() { return { Type::Pause, {} }; }
+    static TransportEvent stop() { return { Type::Stop, {} }; }
+    static TransportEvent seek(secs_t pos) { return { Type::Seek, SeekData { pos } }; }
+
+    Type type = Type::Unknown;
+    std::variant<std::monostate, SeekData> data;
+};
+using TransportEvents = std::vector<TransportEvent>;
 }

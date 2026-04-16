@@ -93,6 +93,7 @@ void MixerChannel::applyOutputParams(const AudioOutputParams& requiredParams)
         fx->paramsChanged().onReceive(this, [this](const AudioFxParams& fxParams) {
             m_params.fxChain.insert_or_assign(fxParams.chainOrder, fxParams);
             m_paramsChanges.send(m_params);
+            updateShouldProcessDuringSilence();
         }, async::Asyncable::Mode::SetReplace);
     }
 
@@ -130,15 +131,7 @@ void MixerChannel::applyOutputParams(const AudioOutputParams& requiredParams)
         m_mutedChanged.notify();
     }
 
-    const bool shouldProcessDuringSilence = std::any_of(m_fxProcessors.cbegin(), m_fxProcessors.cend(),
-                                                        [](const IFxProcessorPtr& fx) {
-        return fx->shouldProcessDuringSilence();
-    });
-
-    if (shouldProcessDuringSilence != m_shouldProcessDuringSilence) {
-        m_shouldProcessDuringSilence = shouldProcessDuringSilence;
-        m_shouldProcessDuringSilenceChanged.send(shouldProcessDuringSilence);
-    }
+    updateShouldProcessDuringSilence();
 }
 
 async::Channel<AudioOutputParams> MixerChannel::outputParamsChanged() const
@@ -219,9 +212,9 @@ samples_t MixerChannel::process(float* buffer, samples_t samplesPerChannel)
         return processedSamplesCount;
     }
 
+    const samples_t pos = m_getPlaybackPosition ? m_getPlaybackPosition->playbackPosition().samples() : 0;
     for (IFxProcessorPtr& fx : m_fxProcessors) {
         if (fx->active()) {
-            const samples_t pos = m_getPlaybackPosition ? m_getPlaybackPosition->playbackPositionSamples() : 0;
             fx->process(buffer, samplesPerChannel, pos);
         }
     }
@@ -261,6 +254,22 @@ void MixerChannel::completeOutput(float* buffer, unsigned int samplesCount)
     }
 
     m_isSilent = RealIsNull(globalPeak);
+}
+
+void MixerChannel::updateShouldProcessDuringSilence()
+{
+    bool shouldProcessDuringSilence = false;
+    for (const IFxProcessorPtr& fx : m_fxProcessors) {
+        if (fx->shouldProcessDuringSilence()) {
+            shouldProcessDuringSilence = true;
+            break;
+        }
+    }
+
+    if (shouldProcessDuringSilence != m_shouldProcessDuringSilence) {
+        m_shouldProcessDuringSilence = shouldProcessDuringSilence;
+        m_shouldProcessDuringSilenceChanged.send(shouldProcessDuringSilence);
+    }
 }
 
 bool MixerChannel::isSilent() const
